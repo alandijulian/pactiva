@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Legal Hub</title>
+<meta name="description" content="Legal Hub: pakar hukum terverifikasi dan alat legal untuk kreator konten Indonesia.">
+<meta name="theme-color" content="#0A62C9">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect x='3' y='3' width='34' height='34' rx='10' fill='none' stroke='%230A62C9' stroke-width='3'/%3E%3Crect x='10' y='10' width='9' height='9' rx='3' fill='none' stroke='%230A62C9' stroke-width='2.6'/%3E%3Crect x='21' y='21' width='9' height='9' rx='3' fill='none' stroke='%23378FE9' stroke-width='2.6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 40 40"><rect x="3" y="3" width="34" height="34" rx="10" fill="none" style="stroke:var(--logo1,#0A62C9)" stroke-width="3"/><rect x="10" y="10" width="9" height="9" rx="3" fill="none" style="stroke:var(--logo1,#0A62C9)" stroke-width="2.6"/><rect x="21" y="21" width="9" height="9" rx="3" fill="none" style="stroke:var(--logo2,#378FE9)" stroke-width="2.6"/><path d="M21 14h6a3 3 0 0 1 3 3v1M19 26h-6a3 3 0 0 1-3-3v-1" fill="none" style="stroke:var(--logo2,#378FE9)" stroke-width="2.6" stroke-linecap="round"/></symbol>
+</svg>
+
+<div id="toasts"></div>
+
+<!-- ================= LANDING (halaman depan publik) ================= -->
+<div class="lp" id="landing" hidden></div>
+
+<!-- ================= AUTH ================= -->
+<div class="auth" id="auth" hidden>
+  <button type="button" class="auth-back" data-action="to-landing"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg><span id="auth-back-t">Beranda</span></button>
+  <button type="button" class="lamp-cord-wrapper" data-action="lamp" id="lamp" title="Tarik tali untuk ganti tema (gelap/terang)" aria-label="Ganti tema gelap atau terang">
+    <span class="lamp-head"></span><span class="lamp-rope"></span><span class="lamp-knob"></span>
+  </button>
+
+  <div class="auth-grid">
+    <section class="auth-card">
+      <div class="auth-top">
+        <div class="brand"><svg class="logo" aria-hidden="true"><use href="#logo"/></svg><span>Legal Hub</span></div>
+        <div class="auth-tools">
+          <button type="button" class="pal-btn" data-action="pal-pop" id="auth-pal" title="Warna tema" aria-label="Warna tema"><span class="pal-dot"></span></button>
+          <div class="lang" role="group" aria-label="Bahasa">
+            <button type="button" id="lang-btn-id" data-action="lang" data-l="id">ID</button>
+            <button type="button" id="lang-btn-en" data-action="lang" data-l="en">EN</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="pane-login">
+        <h1 data-i18n="welcomeTitle">Selamat datang kembali</h1>
+        <p class="sub" data-i18n="welcomeSub">Masuk untuk melanjutkan ke Legal Hub</p>
+        <div class="fld">
+          <label for="l-user" data-i18n="labelId">Email atau username</label>
+          <input class="inp" id="l-user" placeholder="you@example.com" autocomplete="username" autocapitalize="none">
+        </div>
+        <div class="fld">
+          <label for="l-pass" data-i18n="labelPass">Password</label>
+          <div class="pw">
+            <input class="inp" id="l-pass" type="password" data-i18n-ph="phPass" placeholder="Masukkan password" autocomplete="current-password">
+            <button class="eye" type="button" data-action="eye" data-target="l-pass" aria-label="Tampilkan password"><svg class="ic" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+        </div>
+        <div class="row-between">
+          <label class="chk"><input type="checkbox" id="l-rem"><span class="box"></span><span data-i18n="remember">Ingat saya</span></label>
+          <button class="lnk" type="button" data-action="forgot" data-i18n="forgot">Lupa password?</button>
+        </div>
+        <button class="btn block lg" id="btn-login" data-action="login" data-i18n="btnLogin">Masuk</button>
+        <p class="alt"><span data-i18n="noAccount">Belum punya akun?</span> &bull; <button class="lnk b" type="button" data-action="pane" data-t="reg" data-i18n="signUp">Daftar</button></p>
+        <div class="demo" id="demo-box"></div>
+      </div>
+
+      <div id="pane-reg" hidden>
+        <h1 data-i18n="regTitle">Buat akun</h1>
+        <p class="sub" data-i18n="regSub">Bergabung sebagai client atau pakar hukum</p>
+        <div class="fld">
+          <label data-i18n="regAs">Daftar sebagai</label>
+          <div class="seg">
+            <button type="button" class="on" data-action="role" data-r="Client" id="role-Client" data-i18n="roleClient">Client</button>
+            <button type="button" data-action="role" data-r="Expert" id="role-Expert" data-i18n="roleExpert">Pakar hukum</button>
+          </div>
+        </div>
+        <div class="fld"><label for="r-nama" data-i18n="labelName">Nama lengkap</label><input class="inp" id="r-nama" autocomplete="name"></div>
+        <div class="fld">
+          <label for="r-user" data-i18n="labelUser">Username</label>
+          <input class="inp" id="r-user" autocapitalize="none" autocomplete="username">
+          <span class="hint" data-i18n="hintUser">3-20 karakter: huruf, angka, underscore.</span>
+        </div>
+        <div class="fld"><label for="r-email" data-i18n="labelEmail">Email</label><input class="inp" id="r-email" type="email" placeholder="you@example.com" autocomplete="email" autocapitalize="none"></div>
+        <div id="r-expert-box" hidden>
+          <div class="note" data-i18n="expertNote">Akun pakar aktif setelah admin menyelesaikan screening latar belakang Anda.</div>
+          <div class="fld"><label for="r-bidang" data-i18n="labelField">Bidang keahlian</label><select class="sel" id="r-bidang"></select></div>
+          <div class="row2">
+            <div class="fld"><label for="r-izin" data-i18n="labelIzin">No. izin praktik / KTA</label><input class="inp" id="r-izin" maxlength="40"></div>
+            <div class="fld"><label for="r-org" data-i18n="labelOrg">Organisasi profesi</label><select class="sel" id="r-org"></select></div>
+          </div>
+          <div class="row2">
+            <div class="fld"><label for="r-pend" data-i18n="labelEdu">Pendidikan terakhir</label><input class="inp" id="r-pend" maxlength="120" data-i18n-ph="phEdu" placeholder="mis. S2 Hukum - Universitas Indonesia"></div>
+            <div class="fld"><label for="r-exp" data-i18n="labelExp">Pengalaman (tahun)</label><input class="inp" id="r-exp" type="number" min="0" max="60" inputmode="numeric"></div>
+          </div>
+          <div class="fld">
+            <label for="r-link" data-i18n="labelDoc">Link dokumen pendukung</label>
+            <input class="inp" id="r-link" type="url" placeholder="https://drive.google.com/...">
+            <span class="hint" data-i18n="hintDoc">Folder berisi scan KTA/izin praktik, ijazah, dan CV. Pastikan admin bisa membukanya.</span>
+          </div>
+          <div class="fld"><label for="r-ring" data-i18n="labelBg">Ringkasan latar belakang</label><textarea class="inp" id="r-ring" maxlength="1000" data-i18n-ph="phBg" placeholder="Pengalaman, spesialisasi, dan kasus yang pernah ditangani (minimal 30 karakter)"></textarea></div>
+          <label class="chk agree"><input type="checkbox" id="r-agree"><span class="box"></span><span data-i18n="agree">Saya menyatakan data di atas benar dan bersedia diverifikasi oleh admin.</span></label>
+        </div>
+        <div class="fld">
+          <label for="r-pass" data-i18n="labelPass">Password</label>
+          <div class="pw">
+            <input class="inp" id="r-pass" type="password" data-i18n-ph="phNewPass" placeholder="Minimal 6 karakter" autocomplete="new-password">
+            <button class="eye" type="button" data-action="eye" data-target="r-pass" aria-label="Tampilkan password"><svg class="ic" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+        </div>
+        <button class="btn block lg" id="btn-reg" data-action="register" data-i18n="btnReg">Buat akun</button>
+        <p class="alt"><span data-i18n="haveAccount">Sudah punya akun?</span> &bull; <button class="lnk b" type="button" data-action="pane" data-t="login" data-i18n="signIn">Masuk</button></p>
+      </div>
+
+      <p class="foot">&copy; <span id="yr"></span> Legal Hub &bull; <span data-i18n="privacy">Privasi</span> &bull; <span data-i18n="terms">Ketentuan</span></p>
+    </section>
+
+    <aside class="spot-card" id="spot">
+      <div class="skel" style="width:70%;min-height:34px"></div>
+      <div class="skel" style="width:min(100%,260px);min-height:260px;margin-top:18px"></div>
+    </aside>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div class="shell" id="app" hidden>
+  <header class="topnav">
+    <div class="topnav-in">
+      <button class="tn-logo" data-action="nav" data-view="home" aria-label="Legal Hub - Beranda"><svg class="logo" aria-hidden="true"><use href="#logo"/></svg></button>
+      <label class="tn-search"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5"/></svg><input type="search" id="g-search" placeholder="Cari" aria-label="Pencarian"></label>
+      <nav class="nav" id="nav" aria-label="Menu utama"></nav>
+      <div class="clh-notif-wrapper">
+        <button class="nav-btn clh-notif-btn" data-action="notif" id="btn-notif" aria-label="Notifikasi"><span class="nb-ic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span class="clh-notif-badge" id="clhBadge" hidden>0</span></span><span class="lbl" id="lbl-notif">Notifikasi</span></button>
+        <div class="clh-notif-dropdown" id="clhDropdown">
+          <div class="clh-notif-header"><span id="lbl-notif-h">Notifikasi</span><button class="lnk sm" data-action="notif-read" id="lbl-notif-read">Tandai dibaca</button></div>
+          <ul class="clh-notif-list" id="clhList"><li class="clh-notif-empty">...</li></ul>
+        </div>
+      </div>
+      <div class="me-wrap">
+        <button class="nav-btn me-btn" data-action="me-menu" aria-haspopup="true" aria-label="Menu akun"><span class="avatar xs" id="av"></span><span class="lbl"><span id="lbl-me">Saya</span> &#9662;</span></button>
+        <div class="me-dd" id="meDd"></div>
+      </div>
+    </div>
+  </header>
+  <div class="layout three" id="layout">
+    <aside class="col-left" id="col-left"></aside>
+    <main class="main"><div id="view"></div></main>
+    <aside class="col-right" id="col-right"></aside>
+  </div>
+</div>
+
+<div class="pal-pop" id="palPop" hidden role="dialog" aria-label="Warna tema"></div>
+
+<div class="modal" id="modal" hidden data-action="close"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<script src="js/config.js"></script>
+<script src="js/app.js" defer></script>
+</body>
+</html>
