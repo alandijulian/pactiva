@@ -11,7 +11,8 @@ var S = {
   cfg: {
     fx: { IDR: 1, USD: 16000, EUR: 17500, SGD: 12000, MYR: 3800, JPY: 105 }, taxRate: 0.005, commission: 0.15,
     kategori: ['Hak Cipta & HKI', 'Kontrak & Bisnis', 'Pajak', 'Ketenagakerjaan', 'Perdata & Keluarga', 'Pidana', 'Lainnya'],
-    services: { konsultasi: { label: 'Konsultasi 30 menit', price: 250000 }, review: { label: 'Review dokumen', price: 500000 }, draf: { label: 'Penyusunan draf kontrak', price: 1000000 } },
+    services: { konsultasi: { label: 'Konsultasi', unit: 'menit' }, review: { label: 'Review dokumen', unit: 'hari' } },
+    book: { autoDays: 3, menitMin: 15, menitMax: 480, durDefault: 30, hariMin: 1, hariMax: 60, chatMax: 1000 },
     cost: { contract: 50, question: 25 },
     topup: { poin: { poin: 1000, label: '1000 Poin', price: 45000 }, subs: { quota: 50, plan: 'Pro Monthly', label: 'Pro Monthly', price: 99000 } },
     org: ['PERADI', 'KAI (Kongres Advokat Indonesia)', 'IKADIN', 'INI (Ikatan Notaris Indonesia)', 'IKPI (Ikatan Konsultan Pajak Indonesia)', 'AKHKI (Konsultan HKI)', 'Lainnya'],
@@ -23,13 +24,13 @@ var L = {};
 var STATUS = {
   contracts: ['Menunggu Verifikasi', 'Terverifikasi', 'Ditolak'],
   copyrights: ['Dilaporkan', 'Dalam Proses', 'Selesai', 'Ditolak'],
-  bookings: ['Menunggu', 'Diterima', 'Selesai', 'Ditolak'],
+  bookings: ['Negosiasi', 'Ditawarkan', 'Menunggu', 'Berjalan', 'Menunggu Konfirmasi', 'Selesai', 'Ditolak', 'Dibatalkan'],
   verify: ['Menunggu', 'Dalam Screening', 'Perlu Revisi', 'Disetujui', 'Ditolak'],
   ask: ['Terbuka', 'Terjawab', 'Selesai', 'Dikembalikan'],
   cashouts: ['Menunggu', 'Dibayar', 'Ditolak'],
   reviews: ['Perlu Tinjau', 'Tampil', 'Disembunyikan']
 };
-var ST_EN = { 'Menunggu Verifikasi': 'Pending review', 'Terverifikasi': 'Verified', 'Ditolak': 'Rejected', 'Dilaporkan': 'Reported', 'Dalam Proses': 'In progress', 'Selesai': 'Completed', 'Menunggu': 'Pending', 'Diterima': 'Accepted', 'Terbuka': 'Open', 'Terjawab': 'Answered', 'Aktif': 'Active', 'Dalam Screening': 'In screening', 'Perlu Revisi': 'Needs revision', 'Disetujui': 'Approved', 'Perlu Tinjau': 'Needs review', 'Tampil': 'Visible', 'Disembunyikan': 'Hidden', 'Dikembalikan': 'Refunded', 'Dibayar': 'Paid' };
+var ST_EN = { 'Menunggu Verifikasi': 'Pending review', 'Terverifikasi': 'Verified', 'Ditolak': 'Rejected', 'Dilaporkan': 'Reported', 'Dalam Proses': 'In progress', 'Selesai': 'Completed', 'Menunggu': 'Pending', 'Diterima': 'Accepted', 'Terbuka': 'Open', 'Terjawab': 'Answered', 'Aktif': 'Active', 'Dalam Screening': 'In screening', 'Perlu Revisi': 'Needs revision', 'Disetujui': 'Approved', 'Perlu Tinjau': 'Needs review', 'Tampil': 'Visible', 'Disembunyikan': 'Hidden', 'Dikembalikan': 'Refunded', 'Dibayar': 'Paid', 'Negosiasi': 'Negotiating', 'Ditawarkan': 'Offer sent', 'Berjalan': 'In progress', 'Menunggu Konfirmasi': 'Awaiting confirmation', 'Dibatalkan': 'Cancelled' };
 var CREATE_FN = { contracts: 'apiCreateContract', copyrights: 'apiCreateCopyright', taxes: 'apiCreateTax' };
 var MONTHS = { id: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'], en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] };
 
@@ -74,6 +75,8 @@ var PATHS = {
   chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
   heart: 'M12 21s-8-5.3-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.7-8 11-8 11z',
   doc: 'M6 2h9l5 5v15H6zM14 2v6h6M9 13h7M9 17h7',
+  chat: 'M4 5h16v11H9l-5 4zM8 9h8M8 12h5',
+  send: 'M4 12l16-8-6 16-3-7z',
   db: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
   copyright: 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18zM14.8 9.6a3.4 3.4 0 1 0 0 4.8',
   check: 'M5 12.5l4.2 4.2L19 7',
@@ -165,9 +168,9 @@ function stLabel(st) { return S.lang === 'en' && ST_EN[st] ? ST_EN[st] : st; }
 function toneOf(st) {
   if (/Terverifikasi|Selesai|Terjawab|Aktif|Disetujui|Dibayar/.test(st)) return 'b-ok';
   if (/Dikembalikan/.test(st)) return 'b-info';
-  if (/Ditolak|Disembunyikan/.test(st)) return 'b-bad';
+  if (/Ditolak|Disembunyikan|Dibatalkan/.test(st)) return 'b-bad';
   if (/Tampil/.test(st)) return 'b-ok';
-  if (/Proses|Diterima|Screening/.test(st)) return 'b-info';
+  if (/Proses|Diterima|Screening|Berjalan|Ditawarkan/.test(st)) return 'b-info';
   return 'b-warn';
 }
 /* ----- Rating: bintang, ringkasan, label ----- */
@@ -225,7 +228,7 @@ function htmlToRow(html) { var t = document.createElement('tbody'); t.innerHTML 
 /* ============ API bridge (aman di Gemini Canvas / preview) ============ */
 /* ============ Koneksi ke backend (REST: fetch ke Google Apps Script /exec) ============ */
 // Aksi baca boleh diulang otomatis; aksi tulis membawa reqId agar aman diulang tanpa data ganda.
-var READ_FN = /^api(Login|Me|List|Stats|Recap|GetCredit|Spotlight|Feed|Questions|Answers|Experts|Bookings|Earnings|HubStats|ExpertRecap|Photos|MyScreening|Screenings|ReviewTargets|Reviews|ExpertProfile|Landing|ImportScan)$/;
+var READ_FN = /^api(Login|Me|List|Stats|Recap|GetCredit|Spotlight|Feed|Questions|Answers|Experts|Bookings|BookingChat|Earnings|HubStats|ExpertRecap|Photos|MyScreening|Screenings|ReviewTargets|Reviews|ExpertProfile|Landing|ImportScan)$/;
 var Perf = {
   rows: [],
   add: function (fn, total, server) {
@@ -645,7 +648,7 @@ function navItems() {
   var r = role();
   if (r === 'Admin') return [['home', tr('Beranda', 'Home'), 'home'], ['verify', tr('Screening Pakar', 'Expert Screening'), 'shield'], ['ask', 'Bounty', 'ask'], ['bookings', 'Booking', 'calendar'], ['cashouts', tr('Pencairan', 'Payouts'), 'wallet'], ['recap', tr('Rekap Client', 'Clients'), 'users'], ['xrecap', tr('Rekap Pakar', 'Experts'), 'chart'], ['feed', 'Feed', 'feed'], ['reviews', tr('Moderasi Ulasan', 'Review Moderation'), 'star']];
   if (r === 'Expert') return [['home', tr('Beranda', 'Home'), 'home'], ['feed', 'Feed', 'feed'], ['ask', 'Bounty', 'ask'], ['bookings', 'Booking', 'calendar'], ['wallet', tr('Dompet', 'Wallet'), 'wallet'], ['screening', 'Screening', 'shield'], ['myreviews', tr('Ulasan Saya', 'My Reviews'), 'star']];
-  return [['home', tr('Beranda', 'Home'), 'home'], ['feed', 'Feed', 'feed'], ['ask', 'Bounty', 'ask'], ['experts', tr('Pakar', 'Experts'), 'experts'], ['bookings', 'Booking', 'calendar'], ['wallet', tr('Dompet', 'Wallet'), 'wallet'], ['taxes', tr('Pajak', 'Tax'), 'coin']];
+  return [['home', tr('Beranda', 'Home'), 'home'], ['feed', 'Feed', 'feed'], ['ask', 'Bounty', 'ask'], ['experts', tr('Pakar', 'Experts'), 'experts'], ['bookings', 'Booking', 'calendar'], ['wallet', tr('Dompet', 'Wallet'), 'wallet']];
 }
 // Navigasi atas: maksimal 5 menu utama, sisanya masuk panel "Lainnya"
 var NAV_MAX = 5;
@@ -813,7 +816,7 @@ function loadRight() {
       var h = '';
       for (var i = 0; i < res.rows.length; i++) {
         var e = res.rows[i];
-        h += '<div class="item rx" data-user="' + esc(e[0]) + '" data-nama="' + esc(e[1]) + '" data-tarif="' + esc(e[10]) + '">' + avatar(e[0], e[1], 'lg') + '<div class="grow"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(e[0]) + '">' + esc(e[1]) + '</button>' + verMark('1') + '</b><small>' + esc(e[2]) + ' &bull; ' + nf(e[10]) + ' ' + tr('poin/sesi', 'pts/session') + '</small><small class="rx-rate">' + (Number(e[7]) ? '&#9733; ' + nf1(e[6]) + ' (' + nf(e[7]) + ' ' + tr('ulasan', 'reviews') + ')' : tr('Belum ada ulasan', 'No reviews yet')) + '</small><button class="btn ghost sm" data-action="book">+ Booking</button></div></div>';
+        h += '<div class="item rx" data-user="' + esc(e[0]) + '" data-nama="' + esc(e[1]) + '" data-tarif="' + esc(e[10]) + '" data-dur="' + esc(e[12] || '') + '" data-rev="' + esc(e[13] || '') + '">' + avatar(e[0], e[1], 'lg') + '<div class="grow"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(e[0]) + '">' + esc(e[1]) + '</button>' + verMark('1') + '</b><small>' + esc(e[2]) + ' &bull; ' + nf(e[10]) + ' ' + tr('poin', 'pts') + ' / ' + nf(e[12] || 30) + ' ' + tr('menit', 'min') + '</small><small class="rx-rate">' + (Number(e[7]) ? '&#9733; ' + nf1(e[6]) + ' (' + nf(e[7]) + ' ' + tr('ulasan', 'reviews') + ')' : tr('Belum ada ulasan', 'No reviews yet')) + '</small><button class="btn ghost sm" data-action="book">+ Booking</button></div></div>';
       }
       fill(h);
     }, fail);
@@ -905,14 +908,17 @@ function globalSearch(q) {
 function buildNotif(st, hub) {
   var r = role(), items = [];
   if (r === 'Client') {
-    if (hub.pending) items.push([nf(hub.pending) + ' ' + tr('booking menunggu konfirmasi pakar', 'bookings awaiting expert confirmation'), 'bookings']);
+    if (hub.offers) items.push([nf(hub.offers) + ' ' + tr('penawaran pakar menunggu persetujuan Anda', 'expert offers waiting for your approval'), 'bookings']);
+    if (hub.toConfirm) items.push([nf(hub.toConfirm) + ' ' + tr('booking ditandai selesai. Konfirmasi dalam 3 hari.', 'bookings marked done. Confirm within 3 days.'), 'bookings']);
+    if (hub.pending) items.push([nf(hub.pending) + ' ' + tr('booking menunggu respons pakar', 'bookings waiting for the expert'), 'bookings']);
     if (hub.toPick) items.push([nf(hub.toPick) + ' ' + tr('pertanyaan sudah dijawab. Pilih jawaban terbaik.', 'of your questions have answers. Pick the best one.'), 'ask']);
     if (hub.open) items.push([nf(hub.open) + ' ' + tr('pertanyaan Anda belum terjawab', 'of your questions are unanswered'), 'ask']);
     if (hub.toReview) items.push([nf(hub.toReview) + ' ' + tr('konsultasi selesai menunggu ulasan Anda', 'completed consultations awaiting your review'), 'bookings']);
     if (S.credit && S.credit.poin < 50) items.push([tr('Poin Anda hampir habis. Lakukan top-up.', 'You are running low on points. Top up now.'), 'wallet']);
   } else if (r === 'Expert') {
     if (!isVerifiedExpert()) items.push([tr('Pendaftaran Anda sedang dalam proses screening admin', 'Your application is being screened by the admin'), 'screening']);
-    if (hub.incoming) items.push([nf(hub.incoming) + ' ' + tr('permintaan konsultasi baru', 'new consultation requests'), 'bookings']);
+    if (hub.incoming) items.push([nf(hub.incoming) + ' ' + tr('permintaan booking baru menunggu respons Anda', 'new booking requests waiting for you'), 'bookings']);
+    if (hub.active) items.push([nf(hub.active) + ' ' + tr('booking sedang berjalan', 'bookings in progress'), 'bookings']);
     if (hub.unreplied) items.push([nf(hub.unreplied) + ' ' + tr('ulasan belum Anda balas', 'reviews awaiting your reply'), 'myreviews']);
     if (hub.bountyNew) items.push([nf(hub.bountyNew) + ' ' + tr('bounty baru di bidang Anda (Pro)', 'new bounties in your field (Pro)'), 'ask']);
   } else {
@@ -1037,7 +1043,7 @@ var LC = {
   experts: { fn: 'apiExperts', tag: 'div', render: function (r) { return expertHtml(r); }, key: function (r) { return r[0]; }, onRes: function (res, first) { if (first) renderFeatured(res.featured || []); } },
   ledger: { fn: 'apiLedger', tag: 'tbody', render: function (r) { return ledgerRow(r); }, key: function (r) { return r[0] + '|' + r[1]; } },
   cashouts: { fn: 'apiCashouts', tag: 'tbody', render: function (r) { return cashoutRow(r); }, key: function (r) { return r[0] + '|' + r[1]; } },
-  bookings: { fn: 'apiBookings', tag: 'tbody', render: function (r, p) { return bookingRow(r, p); }, key: function (r) { return r[0] + '|' + r[1]; } },
+  bookings: { fn: 'apiBookings', tag: 'tbody', render: function (r, p) { return bookingRow(r, p); }, key: function (r) { return r[0] + '|' + r[1]; }, onRes: function (res, first) { S.bkRows = (first ? [] : S.bkRows || []).concat(res.rows); } },
   earnings: { fn: 'apiEarnings', tag: 'tbody', render: function (r) { return earningRow(r); }, key: function (r) { return r[0] + '|' + r[1]; } },
   reviews: { fn: 'apiReviews', tag: 'div', args: function (o) { o.expert = String(S.exp || ''); return [S.token, o]; }, render: function (r, p) { return reviewHtml(r, p); }, key: function (r) { return r[0] + '|' + r[1]; } },
   verify: { fn: 'apiScreenings', tag: 'div', render: function (r, p) { return screeningCard(r, p); }, key: function (r) { return r[0] + '|' + r[1]; } },
@@ -1132,7 +1138,7 @@ function legacyHeads(key) {
   if (key === 'contracts') return ['ID', tr('Tanggal', 'Date')].concat(a ? ['Client'] : [], ['Brand', tr('Nilai Kontrak', 'Contract value'), 'Status']);
   if (key === 'copyrights') return ['ID', tr('Tanggal', 'Date')].concat(a ? ['Client'] : [], [tr('Link Pelanggar', 'Infringing link'), tr('Deskripsi', 'Description'), 'Status']);
   if (key === 'taxes') return ['ID', tr('Tanggal', 'Date'), tr('Sumber', 'Source'), tr('Jumlah', 'Amount'), tr('Estimasi Pajak', 'Est. tax')];
-  return ['Client', tr('Kontrak', 'Contracts'), tr('Nilai Terverifikasi', 'Verified value'), tr('Kasus HC', 'Copyright cases'), tr('Belum Selesai', 'Open'), tr('Pendapatan', 'Revenue'), tr('Est. Pajak', 'Est. tax')];
+  return ['Client', tr('Kontrak', 'Contracts'), tr('Nilai Terverifikasi', 'Verified value'), tr('Kasus HC', 'Copyright cases'), tr('Belum Selesai', 'Open')];
 }
 function statusSelect(key, cur) {
   return '<select class="status-sel ' + toneOf(cur) + '" data-action="status" data-prev="' + esc(cur) + '" aria-label="Status">' + opts(STATUS[key], cur, true) + '</select>';
@@ -1156,7 +1162,7 @@ function legacyRow(key, r, pending) {
     h += '<td class="strong">' + esc(r[3]) + '</td><td class="num">' + esc(r[4]) + ' ' + nf(r[5]) + '</td><td class="num">' + rp(r[6]) + '</td>';
   } else {
     h += '<td class="strong">' + esc(r[0]) + '</td><td class="num">' + nf(r[1]) + '</td><td class="num">' + rp(r[2]) + '</td>';
-    h += '<td class="num">' + nf(r[3]) + '</td><td class="num">' + nf(r[4]) + '</td><td class="num">' + rp(r[5]) + '</td><td class="num">' + rp(r[6]) + '</td>';
+    h += '<td class="num">' + nf(r[3]) + '</td><td class="num">' + nf(r[4]) + '</td>';
   }
   return h + '</tr>';
 }
@@ -1221,11 +1227,11 @@ function expertHtml(r) {
   // r: [username, nama, bidang, bio, jawaban, konsultasi]
   // r: [..., 6 rata-rata, 7 jumlah ulasan, 8 teladan, 9 % puas]
   // r: [..., 10 tarif poin, 11 pro]
-  var h = '<article class="item exp" data-user="' + esc(r[0]) + '" data-nama="' + esc(r[1]) + '" data-tarif="' + esc(r[10]) + '">' + avatar(r[0], r[1], 'lg') + '<div class="grow">';
+  var h = '<article class="item exp" data-user="' + esc(r[0]) + '" data-nama="' + esc(r[1]) + '" data-tarif="' + esc(r[10]) + '" data-dur="' + esc(r[12] || '') + '" data-rev="' + esc(r[13] || '') + '">' + avatar(r[0], r[1], 'lg') + '<div class="grow">';
   h += '<b style="display:flex;align-items:center;gap:6px"><button class="nm-link" data-action="expert-open" data-user="' + esc(r[0]) + '">' + esc(r[1]) + '</button>' + verMark('1') + (r[11] === '1' ? '<span class="pro-b">PRO</span>' : '') + '</b><span class="tagc" style="margin-top:6px">' + esc(r[2]) + '</span>';
   h += '<div class="rate-line">' + rateChip(r[6], r[7], r[8]) + (Number(r[7]) ? '<span class="muted sm">' + nf(r[9]) + '% ' + tr('puas', 'satisfied') + '</span>' : '') + '</div>';
   h += '<p>' + esc(r[3] || tr('Pakar hukum terverifikasi.', 'Verified legal expert.')) + '</p>';
-  h += '<div class="ifoot" style="margin-top:0"><span class="badge b-tarif">' + ic('coin') + nf(r[10]) + ' ' + tr('poin/sesi', 'pts/session') + '</span><span class="badge b-info">' + nf(r[4]) + ' ' + tr('jawaban', 'answers') + '</span><span class="badge b-ok">' + nf(r[5]) + ' ' + tr('konsultasi', 'consultations') + '</span>';
+  h += '<div class="ifoot" style="margin-top:0"><span class="badge b-tarif">' + ic('coin') + nf(r[10]) + ' ' + tr('poin', 'pts') + ' / ' + nf(r[12] || 30) + ' ' + tr('menit', 'min') + '</span><span class="badge b-info">' + nf(r[4]) + ' ' + tr('jawaban', 'answers') + '</span><span class="badge b-ok">' + nf(r[5]) + ' ' + tr('konsultasi', 'consultations') + '</span>';
   h += '<button class="btn ghost sm" data-action="expert-open" data-user="' + esc(r[0]) + '" style="margin-left:auto">' + tr('Lihat ulasan', 'See reviews') + '</button>';
   if (role() === 'Client') h += '<button class="btn sm" data-action="book">Booking</button>';
   h += '</div></div></article>';
@@ -1239,36 +1245,38 @@ function renderFeatured(list) {
   var h = '<div class="card feat"><div class="feat-h"><b>' + tr('Pakar Unggulan', 'Featured experts') + '</b><span class="muted sm">' + tr('Slot berbayar untuk pakar Pro. Urutan rating di bawah tidak terpengaruh.', 'A paid slot for Pro experts. The rating order below is not affected.') + '</span></div><div class="feat-row">';
   for (var i = 0; i < list.length; i++) {
     var e = list[i];
-    h += '<div class="item feat-i" data-user="' + esc(e[0]) + '" data-nama="' + esc(e[1]) + '" data-tarif="' + esc(e[10]) + '">' + avatar(e[0], e[1], 'lg') + '<div class="grow"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(e[0]) + '">' + esc(e[1]) + '</button><span class="pro-b">PRO</span></b><small>' + esc(e[2]) + '</small><small class="rx-rate">' + (Number(e[7]) ? '&#9733; ' + nf1(e[6]) + ' (' + nf(e[7]) + ')' : tr('Belum ada ulasan', 'No reviews yet')) + ' &bull; ' + nf(e[10]) + ' ' + tr('poin/sesi', 'pts/session') + '</small>' + (role() === 'Client' ? '<button class="btn sm" data-action="book">Booking</button>' : '') + '</div></div>';
+    h += '<div class="item feat-i" data-user="' + esc(e[0]) + '" data-nama="' + esc(e[1]) + '" data-tarif="' + esc(e[10]) + '" data-dur="' + esc(e[12] || '') + '" data-rev="' + esc(e[13] || '') + '">' + avatar(e[0], e[1], 'lg') + '<div class="grow"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(e[0]) + '">' + esc(e[1]) + '</button><span class="pro-b">PRO</span></b><small>' + esc(e[2]) + '</small><small class="rx-rate">' + (Number(e[7]) ? '&#9733; ' + nf1(e[6]) + ' (' + nf(e[7]) + ')' : tr('Belum ada ulasan', 'No reviews yet')) + ' &bull; ' + nf(e[10]) + ' ' + tr('poin', 'pts') + ' / ' + nf(e[12] || 30) + ' ' + tr('menit', 'min') + '</small>' + (role() === 'Client' ? '<button class="btn sm" data-action="book">Booking</button>' : '') + '</div></div>';
   }
   box.innerHTML = h + '</div></div>';
   ensurePhotos(box);
 }
-function bookingSelect(cur) {
-  var list;
-  if (isAdmin()) list = STATUS.bookings;
-  else if (cur === 'Menunggu') list = ['Menunggu', 'Diterima', 'Ditolak'];
-  else if (cur === 'Diterima') list = ['Diterima', 'Selesai'];
-  else return badge(cur);
-  return '<select class="status-sel ' + toneOf(cur) + '" data-action="bk-status" data-prev="' + esc(cur) + '" aria-label="Status">' + opts(list, cur, true) + '</select>';
+// Booking butuh tindakan dari pembaca? (tombol "Buka" ditonjolkan)
+function bookingNeedsMe(r) {
+  var me = role(), st = r[7];
+  if (me === 'Client') return st === 'Ditawarkan' || st === 'Menunggu Konfirmasi' || r[20] === '1';
+  if (me === 'Expert') return st === 'Negosiasi' || st === 'Menunggu' || st === 'Berjalan';
+  return st === 'Menunggu Konfirmasi';
 }
 function bookingHeads() {
   var r = role();
-  var h = ['ID', tr('Tanggal', 'Date'), r === 'Client' ? tr('Pakar', 'Expert') : (r === 'Expert' ? 'Client' : 'Client / ' + tr('Pakar', 'Expert')), tr('Layanan', 'Service'), tr('Harga', 'Price')];
-  if (r !== 'Client') h.push(tr('Komisi', 'Fee'));
-  h.push('Status');
-  h.push(tr('Ulasan', 'Review'));
-  return h;
+  return ['ID', tr('Tanggal', 'Date'), r === 'Client' ? tr('Pakar', 'Expert') : (r === 'Expert' ? 'Client' : 'Client / ' + tr('Pakar', 'Expert')), tr('Layanan', 'Service'), tr('Harga', 'Price'), 'Status', '', tr('Ulasan', 'Review')];
+}
+function bookingPrice(r) {
+  var pt = Number(r[12]) || 0; // 0 = belum ada penawaran, atau data lama dalam rupiah
+  if (pt) return nf(pt) + ' ' + tr('poin', 'pts');
+  if (r[7] === 'Negosiasi') return '<span class="muted">' + tr('Belum ditawar', 'No offer yet') + '</span>';
+  return Number(r[5]) ? rp(r[5]) : '<span class="muted">-</span>';
 }
 function bookingRow(r, pending) {
-  // r: [id, tgl, client, expert, layanan, harga, komisi, status, namaClient, namaExpert]
+  // r: [id, tgl, client, expert, layanan, harga, komisi, status, namaClient, namaExpert, bintang, bisaUlas, poin,
+  //     jenis, durasi, satuan, tenggat, kebutuhan, ditandaiSelesai, cairOtomatis, lewatTenggat, mulai]
   var who = role() === 'Client' ? r[9] : (role() === 'Expert' ? r[8] : r[8] + ' / ' + r[9]);
+  var need = !pending && bookingNeedsMe(r);
   var h = '<tr class="' + (pending ? 'is-pending' : '') + '" data-id="' + esc(r[0]) + '" data-tgl="' + esc(r[1]) + '" data-xn="' + esc(r[9] || '') + '">';
   h += '<td class="mono">' + esc(r[0]) + '</td><td class="num">' + esc(fmtDate(r[1])) + '</td><td>' + esc(who) + '</td><td>' + esc(r[4]) + '</td>';
-  var pt = Number(r[12]) || 0; // booking berbayar poin; 0 = data lama dalam rupiah
-  h += '<td class="num">' + (pt ? nf(pt) + ' ' + tr('poin', 'pts') : rp(r[5])) + '</td>';
-  if (role() !== 'Client') h += '<td class="num">' + (pt ? '<span class="muted">' + tr('saat pencairan', 'at payout') + '</span>' : rp(r[6])) + '</td>';
-  h += '<td>' + (role() !== 'Client' && !pending ? bookingSelect(r[7]) : badge(r[7])) + '</td>';
+  h += '<td class="num">' + bookingPrice(r) + '</td>';
+  h += '<td>' + badge(r[7]) + (r[20] === '1' ? ' <span class="badge b-bad">' + tr('Lewat tenggat', 'Overdue') + '</span>' : '') + '</td>';
+  h += '<td>' + (pending ? '' : '<button class="btn ' + (need ? '' : 'ghost ') + 'sm bk-open" data-action="bk-open">' + (need ? '<i class="dot" aria-hidden="true"></i>' : '') + tr('Buka', 'Open') + '</button>') + '</td>';
   h += '<td class="rv-cell">' + bookingRateCell(r[10], r[11]) + '</td></tr>';
   return h;
 }
@@ -1496,6 +1504,15 @@ function rateBooking(btn) {
     opt: function (v) { cell.innerHTML = stars(v, 'sm'); },
     undo: function () { cell.innerHTML = prev; } });
 }
+function rateFromDetail() {
+  var b = S.bkd && S.bkd.b;
+  if (!b) return;
+  var prev = [b[10], b[11]];
+  closeModal();
+  openRateForm({ jenis: 'Konsultasi', refId: b[0], refTgl: b[1], nama: b[9],
+    opt: function (v) { b[10] = String(v); b[11] = '0'; syncBookingRow(b); },
+    undo: function () { b[10] = prev[0]; b[11] = prev[1]; syncBookingRow(b); } });
+}
 function rateTarget(btn) {
   var row = btn.closest('.rv-target'), card = row.parentNode;
   openRateForm({ jenis: 'Konsultasi', refId: row.getAttribute('data-id'), refTgl: row.getAttribute('data-tgl'), nama: row.getAttribute('data-xn'),
@@ -1621,10 +1638,10 @@ VIEWS.expert = function () {
     x += '<p class="prof-head">' + tr('Pakar hukum', 'Legal expert') + (p.bidang ? ' &bull; ' + esc(p.bidang) : '') + '</p>';
     x += '<div class="rate-line" style="margin-top:6px">' + rateChip(sm.avg, sm.n, sm.teladan) + '</div>';
     x += '<p class="prof-meta">' + nf(p.answers) + ' ' + tr('jawaban', 'answers') + ' &bull; ' + nf(p.done) + ' ' + tr('konsultasi selesai', 'completed sessions') + ' &bull; ' + nf(p.posts) + ' ' + tr('postingan', 'posts') + '</p>';
-    x += '<p class="prof-rate">' + ic('coin') + '<b>' + nf(p.tarif) + ' ' + tr('poin', 'points') + '</b> ' + tr('per sesi 30 menit', 'per 30-minute session') + ' <span class="muted">(' + poinRp(p.tarif) + ')</span>' + (p.pro ? ' <span class="pro-b">PRO</span>' : '') + '</p>';
+    x += '<p class="prof-rate">' + ic('coin') + '<b>' + nf(p.tarif) + ' ' + tr('poin', 'points') + '</b> ' + tr('per sesi ', 'per ') + nf(p.durasi || 30) + tr(' menit', '-minute session') + ' <span class="muted">(' + poinRp(p.tarif) + ')</span>' + (p.pro ? ' <span class="pro-b">PRO</span>' : '') + '</p>' + '<p class="prof-rate sub">' + ic('doc') + tr('Review dokumen mulai ', 'Document review from ') + '<b>' + nf(p.tarifReview || p.tarif * 2) + ' ' + tr('poin', 'points') + '</b> <span class="muted">' + tr('(harga & lama pengerjaan disepakati lewat chat)', '(price and turnaround agreed in chat)') + '</span></p>';
     if (p.bio) x += '<p class="prof-bio">' + escBr(p.bio) + '</p>';
     x += '<div class="pf-actions">';
-    if (role() === 'Client') x += '<button class="btn sm" data-action="book" data-user="' + esc(p.username) + '" data-nama="' + esc(p.nama) + '" data-tarif="' + esc(p.tarif) + '">' + tr('Booking konsultasi', 'Book a consultation') + '</button>';
+    if (role() === 'Client') x += '<button class="btn sm" data-action="book" data-user="' + esc(p.username) + '" data-nama="' + esc(p.nama) + '" data-tarif="' + esc(p.tarif) + '" data-dur="' + esc(p.durasi || '') + '" data-rev="' + esc(p.tarifReview || '') + '">' + tr('Booking konsultasi', 'Book a consultation') + '</button>';
     if (me) x += '<button class="btn ghost sm" data-action="nav" data-view="profile">' + tr('Edit profil', 'Edit profile') + '</button>';
     x += '</div></div></div>';
     top.innerHTML = x;
@@ -1687,20 +1704,20 @@ VIEWS.experts = function () {
 
 VIEWS.bookings = function () {
   var r = role();
-  var h = head('Booking', r === 'Client' ? tr('Booking saya', 'My bookings') : (r === 'Expert' ? tr('Permintaan konsultasi', 'Consultation requests') : tr('Semua booking', 'All bookings')), r === 'Client' ? tr('Pantau status konsultasi yang Anda pesan.', 'Track the consultations you have booked.') : tr('Terima, selesaikan, atau tolak permintaan konsultasi.', 'Accept, complete or decline consultation requests.'));
+  var h = head('Booking', r === 'Client' ? tr('Booking saya', 'My bookings') : (r === 'Expert' ? tr('Booking & penawaran', 'Bookings & offers') : tr('Semua booking', 'All bookings')), r === 'Client' ? tr('Buka booking untuk chat dengan pakar, setujui penawaran, dan konfirmasi selesai.', 'Open a booking to chat with the expert, accept offers and confirm completion.') : tr('Buka booking untuk chat dengan client, kirim penawaran, dan tandai selesai.', 'Open a booking to chat with the client, send offers and mark work as done.'));
   h += listShell('bookings', { title: tr('Daftar booking', 'Bookings'), heads: bookingHeads(), filter: STATUS.bookings, filterLabel: tr('Semua status', 'All statuses'), filterIsStatus: true });
   el('view').innerHTML = h;
   initList('bookings');
 };
 
 VIEWS.earnings = function () {
-  var h = head(tr('Pendapatan', 'Earnings'), tr('Pendapatan konsultasi', 'Consultation earnings'), tr('Hasil konsultasi selesai setelah komisi platform. Pajak hanya estimasi.', 'Completed consultations after the platform fee. Tax is an estimate only.'));
+  var h = head(tr('Pendapatan', 'Earnings'), tr('Pendapatan konsultasi', 'Consultation earnings'), tr('Hasil konsultasi selesai setelah komisi platform.', 'Completed consultations after the platform fee.'));
   h += '<div class="stats s3" id="stats"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
   h += listShell('earnings', { title: tr('Riwayat pendapatan', 'Earnings history'), heads: ['ID', tr('Tanggal', 'Date'), 'Client', tr('Layanan', 'Service'), tr('Bruto', 'Gross'), tr('Komisi', 'Fee'), tr('Bersih', 'Net')] });
   el('view').innerHTML = h;
   fetchHub(function (st) {
     if (!el('stats')) return;
-    el('stats').innerHTML = statCard(tr('Pendapatan kotor', 'Gross earnings'), rp(st.gross), nf(st.done) + ' ' + tr('konsultasi', 'consultations'), 'var(--brand)') + statCard(tr('Komisi platform', 'Platform fee'), rp(st.comm), Math.round(S.cfg.commission * 100) + '% ' + tr('dari tiap sesi', 'per session'), 'var(--accent)') + statCard(tr('Bersih', 'Net'), rp(st.net), tr('estimasi pajak ', 'est. tax ') + rp(st.tax), 'var(--ok)');
+    el('stats').innerHTML = statCard(tr('Pendapatan kotor', 'Gross earnings'), rp(st.gross), nf(st.done) + ' ' + tr('konsultasi', 'consultations'), 'var(--brand)') + statCard(tr('Komisi platform', 'Platform fee'), rp(st.comm), Math.round(S.cfg.commission * 100) + '% ' + tr('dari tiap sesi', 'per session'), 'var(--accent)') + statCard(tr('Bersih', 'Net'), rp(st.net), tr('setelah komisi', 'after fee'), 'var(--ok)');
   });
   initList('earnings');
 };
@@ -1976,7 +1993,12 @@ VIEWS.profile = function () {
   h += '<div class="fld"><label for="pf-nama">' + tr('Nama tampilan', 'Display name') + '</label><input class="inp" id="pf-nama" maxlength="60" value="' + esc(u.nama) + '"></div>';
   if (u.role === 'Expert') {
     h += '<div class="fld"><label for="pf-bidang">' + tr('Bidang keahlian', 'Area of expertise') + '</label><select class="sel" id="pf-bidang">' + opts(S.cfg.kategori, u.bidang) + '</select></div>';
-    h += '<div class="fld"><label for="pf-tarif">' + tr('Tarif konsultasi 30 menit (poin)', '30-minute consultation rate (points)') + '</label><input class="inp" id="pf-tarif" type="number" min="' + ((S.cfg.poin || {}).bookMin || 100) + '" step="10" inputmode="numeric" value="' + esc(u.tarif || '') + '" data-live="tarif"><span class="hint" id="pf-tarif-h"></span></div>';
+    var bm = (S.cfg.poin || {}).bookMin || 100, bk = S.cfg.book || {};
+    h += '<div class="rate-box"><b>' + tr('Tarif patokan Anda', 'Your standard rates') + '</b><p class="muted sm">' + tr('Client bisa booking konsultasi langsung dengan tarif ini, atau mengajak chat dulu untuk menawar. Harga review dokumen selalu disepakati lewat chat.', 'Clients can book a consultation straight away at this rate, or chat first to negotiate. Document review prices are always agreed in chat.') + '</p>';
+    h += '<div class="row2"><div class="fld"><label for="pf-tarif">' + tr('Tarif konsultasi (poin)', 'Consultation rate (points)') + '</label><input class="inp" id="pf-tarif" type="number" min="' + bm + '" step="10" inputmode="numeric" value="' + esc(u.tarif || '') + '" data-live="tarif"></div>';
+    h += '<div class="fld"><label for="pf-dur">' + tr('Durasi sesi (menit)', 'Session length (minutes)') + '</label><input class="inp" id="pf-dur" type="number" min="' + (bk.menitMin || 15) + '" max="' + (bk.menitMax || 480) + '" step="5" inputmode="numeric" value="' + esc(u.durasi || 30) + '" data-live="tarif"></div></div>';
+    h += '<div class="fld"><label for="pf-rev">' + tr('Review dokumen, mulai dari (poin)', 'Document review, starting from (points)') + '</label><input class="inp" id="pf-rev" type="number" min="' + bm + '" step="10" inputmode="numeric" value="' + esc(u.tarifReview || '') + '" data-live="tarif"></div>';
+    h += '<span class="hint" id="pf-tarif-h"></span></div>';
   }
   h += '<div class="fld"><label for="pf-bio">' + tr('Bio singkat (tampil sebagai kutipan Pakar Pilihan)', 'Short bio (shown as the Spotlight quote)') + '</label><textarea class="inp" id="pf-bio" maxlength="240" placeholder="' + tr('Ceritakan keahlian atau kebutuhan hukum Anda...', 'Tell us about your expertise or legal needs...') + '">' + esc(u.bio) + '</textarea></div>';
   h += '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" id="btn-pf" data-action="save-profile">' + tr('Simpan', 'Save') + '</button><button class="btn ghost sm" data-action="logout">' + tr('Keluar', 'Sign out') + '</button></div></div>';
@@ -1987,8 +2009,8 @@ VIEWS.profile = function () {
 function updateTarifHint() {
   var x = el('pf-tarif-h');
   if (!x) return;
-  var t = Math.floor(Number(val('pf-tarif')) || 0), mn = (S.cfg.poin || {}).bookMin || 100;
-  x.textContent = '= ' + poinRp(t) + tr(' per sesi. Minimal ', ' per session. Minimum ') + nf(mn) + tr(' poin. Sesi 60 menit dan review dokumen = 2x tarif.', ' points. 60-minute sessions and document reviews = 2x the rate.');
+  var t = Math.floor(Number(val('pf-tarif')) || 0), d = Math.floor(Number(val('pf-dur')) || 0), rv = Math.floor(Number(val('pf-rev')) || 0), mn = (S.cfg.poin || {}).bookMin || 100;
+  x.textContent = tr('Konsultasi ', 'Consultation ') + nf(t) + tr(' poin (', ' pts (') + poinRp(t) + ') / ' + nf(d) + tr(' menit. Review mulai ', ' min. Review from ') + nf(rv) + tr(' poin (', ' pts (') + poinRp(rv) + tr('). Minimal ', '). Minimum ') + nf(mn) + tr(' poin.', ' points.');
 }
 function paintProfilePhoto() {
   var box = el('pf-av');
@@ -2106,7 +2128,8 @@ VIEWS.copyrights = function () {
   initList('copyrights');
 };
 
-VIEWS.taxes = function () {
+// Fitur pajak (Tax Logger) dinonaktifkan: tidak terdaftar di VIEWS, data di sheet Taxes tetap aman.
+var viewTaxesRetired_ = function () {
   var h = head('Tax Logger', tr('Catat penghasilan, lihat estimasi pajak', 'Log earnings, see estimated tax'), tr('Penghasilan dari berbagai platform dan mata uang dikonversi ke Rupiah untuk estimasi kewajiban pajak.', 'Earnings across platforms and currencies are converted to IDR to estimate tax.'));
   h += '<div class="stats s3" id="tax-sum"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
   h += '<div class="card" id="tax-chart-container" hidden><canvas id="taxChart" height="80" aria-label="' + tr('Grafik pendapatan dan pajak', 'Revenue and tax chart') + '"></canvas></div>';
@@ -2552,49 +2575,280 @@ function pickAnswer(btn) {
 
 /* ----- Booking (modal) ----- */
 function openModal(html) { el('sheet').innerHTML = html; el('modal').hidden = false; }
-function closeModal() { el('modal').hidden = true; el('sheet').innerHTML = ''; }
+function closeModal() { stopBookingPoll(); S.bkd = null; el('modal').hidden = true; el('sheet').innerHTML = ''; el('sheet').classList.remove('wide'); }
 function openBook(item) {
-  var u = String(item.getAttribute('data-user')), nama = String(item.getAttribute('data-nama')), tarif = parseInt(item.getAttribute('data-tarif'), 10) || 0;
+  var u = String(item.getAttribute('data-user')), nama = String(item.getAttribute('data-nama'));
+  var tarif = parseInt(item.getAttribute('data-tarif'), 10) || 0, dur = parseInt(item.getAttribute('data-dur'), 10) || 0, rev = parseInt(item.getAttribute('data-rev'), 10) || 0;
   if (!S.credit) renderCreditWidget();
-  if (tarif) { bookModal(u, nama, tarif); return; }
-  openModal('<div class="loader"><span class="spin"></span> ' + tr('Memuat tarif pakar...', 'Loading the expert rate...') + '</div>');
+  if (tarif && dur && rev) { bookModal(u, nama, tarif, dur, rev); return; }
+  openModal('<div class="loader"><span class="spin"></span> ' + tr('Memuat tarif pakar...', 'Loading the expert rates...') + '</div>');
   api('apiExpertProfile', [S.token, u], function (res) {
     if (!res.ok) { closeModal(); toast(res.msg, 'err'); return; }
-    bookModal(u, res.p.nama || nama, res.p.tarif);
+    bookModal(u, res.p.nama || nama, res.p.tarif, res.p.durasi, res.p.tarifReview);
   }, function (m) { closeModal(); toast(m, 'err'); });
 }
-function bookModal(u, nama, tarif) {
-  S.bk = { tarif: Number(tarif) || 0 };
-  var sv = S.cfg.services, keys = Object.keys(sv);
-  var h = '<h3>' + tr('Booking konsultasi', 'Book a consultation') + '</h3><p class="muted sm" style="margin-bottom:16px">' + tr('dengan ', 'with ') + esc(nama) + ' &bull; ' + nf(tarif) + ' ' + tr('poin per sesi 30 menit', 'points per 30-minute session') + '</p>';
-  h += '<div class="fld"><label for="bk-svc">' + tr('Layanan', 'Service') + '</label><select class="sel" id="bk-svc" data-live="bk">';
-  for (var i = 0; i < keys.length; i++) h += '<option value="' + esc(keys[i]) + '">' + esc(sv[keys[i]].label) + ' - ' + nf(tarif * sv[keys[i]].x) + ' ' + tr('poin', 'pts') + '</option>';
-  h += '</select></div><div class="sum"><div><span>' + tr('Tarif', 'Price') + '</span><b id="bk-price"></b></div><div><span>' + tr('Saldo Anda', 'Your balance') + '</span><b id="bk-bal">-</b></div><div><span>' + tr('Sisa setelah booking', 'Left after booking') + '</span><b id="bk-left">-</b></div></div>';
+// Booking baru: konsultasi langsung (harga patokan) atau chat dulu; review dokumen selalu lewat chat
+function bookModal(u, nama, tarif, dur, rev) {
+  S.bk = { u: u, tarif: Number(tarif) || 0, dur: Number(dur) || 30, rev: Number(rev) || 0 };
+  var h = '<h3>' + tr('Booking pakar', 'Book an expert') + '</h3><p class="muted sm" style="margin-bottom:16px">' + tr('dengan ', 'with ') + esc(nama) + '</p>';
+  h += '<div class="bk-seg" role="radiogroup" aria-label="' + tr('Layanan', 'Service') + '">';
+  h += '<button type="button" class="seg-b on" data-action="bk-jenis" data-v="konsultasi" role="radio" aria-checked="true">' + ic('chat') + '<span><b>' + tr('Konsultasi', 'Consultation') + '</b><small>' + nf(S.bk.tarif) + ' ' + tr('poin', 'pts') + ' / ' + nf(S.bk.dur) + ' ' + tr('menit', 'min') + '</small></span></button>';
+  h += '<button type="button" class="seg-b" data-action="bk-jenis" data-v="review" role="radio" aria-checked="false">' + ic('doc') + '<span><b>' + tr('Review dokumen', 'Document review') + '</b><small>' + tr('mulai ', 'from ') + nf(S.bk.rev) + ' ' + tr('poin', 'pts') + '</small></span></button></div>';
+  h += '<div id="bk-mode-wrap"><div class="fld"><label>' + tr('Cara booking', 'How to book') + '</label>';
+  h += '<label class="opt"><input type="radio" name="bk-mode" value="langsung" checked data-live="bk"><span><b>' + tr('Booking langsung', 'Book now') + '</b><small>' + tr('Pakai tarif patokan. Poin ditahan sekarang dan kembali bila pakar menolak.', 'Standard rate. Points are held now and come back if the expert declines.') + '</small></span></label>';
+  h += '<label class="opt"><input type="radio" name="bk-mode" value="chat" data-live="bk"><span><b>' + tr('Chat dulu', 'Chat first') + '</b><small>' + tr('Bahas kebutuhan, harga, dan durasi dengan pakar. Poin baru ditahan setelah Anda setuju.', 'Discuss your needs, price and length with the expert. Points are held only after you agree.') + '</small></span></label></div></div>';
+  h += '<div class="fld"><label for="bk-note" id="bk-note-l">' + tr('Ceritakan kebutuhan Anda (opsional)', 'Describe what you need (optional)') + '</label><textarea class="inp" id="bk-note" maxlength="500" data-live="bk" placeholder="' + tr('Contoh: saya mau buka usaha katering dan butuh perjanjian kerja sama dengan pemasok. Dokumen bisa dibagikan lewat link Google Drive.', 'e.g. I am starting a catering business and need a supply agreement. Share documents as a Google Drive link.') + '"></textarea><span class="hint">' + tr('Hindari data pribadi yang sensitif. Bagikan dokumen lewat link.', 'Avoid sensitive personal data. Share documents as a link.') + '</span></div>';
+  h += '<div class="sum" id="bk-sum"><div><span>' + tr('Tarif', 'Price') + '</span><b id="bk-price"></b></div><div><span>' + tr('Saldo Anda', 'Your balance') + '</span><b id="bk-bal">-</b></div><div><span>' + tr('Sisa setelah booking', 'Left after booking') + '</span><b id="bk-left">-</b></div></div>';
   h += '<div class="note warn" id="bk-warn" hidden>' + tr('Poin Anda belum cukup. ', 'You do not have enough points. ') + '<button class="lnk" type="button" data-action="topup">' + tr('Top-up sekarang', 'Top up now') + '</button></div>';
-  h += '<p class="muted sm" style="margin-bottom:16px">' + tr('Poin ditahan sampai konsultasi selesai. Jika pakar menolak, poin kembali otomatis.', 'Points are held until the session is done. If the expert declines, they come back automatically.') + '</p>';
-  h += '<div style="display:flex;gap:10px"><button class="btn" data-action="confirm-book" data-u="' + esc(u) + '" style="flex:1">' + tr('Kirim permintaan', 'Send request') + '</button><button class="btn ghost" data-action="close-x">' + tr('Batal', 'Cancel') + '</button></div>';
+  h += '<p class="note info" id="bk-chatinfo" hidden>' + tr('Pakar akan membalas di chat booking dan mengirim penawaran poin serta durasi. Belum ada poin yang dipotong.', 'The expert replies in the booking chat and sends an offer with points and length. No points are taken yet.') + '</p>';
+  h += '<div style="display:flex;gap:10px;margin-top:16px"><button class="btn" id="bk-go" data-action="confirm-book" style="flex:1"></button><button class="btn ghost" data-action="close-x">' + tr('Batal', 'Cancel') + '</button></div>';
   openModal(h);
+  S.bk.jenis = 'konsultasi';
+  updateBookSum();
+}
+function bookMode() {
+  if (!S.bk) return 'langsung';
+  if (S.bk.jenis === 'review') return 'chat';
+  var x = document.querySelector('input[name="bk-mode"]:checked');
+  return x ? x.value : 'langsung';
+}
+function setBookJenis(btn) {
+  if (!S.bk) return;
+  S.bk.jenis = btn.getAttribute('data-v');
+  var bs = document.querySelectorAll('.seg-b');
+  for (var i = 0; i < bs.length; i++) { var on = bs[i] === btn; bs[i].classList.toggle('on', on); bs[i].setAttribute('aria-checked', on ? 'true' : 'false'); }
   updateBookSum();
 }
 function updateBookSum() {
-  var s = S.cfg.services[val('bk-svc')];
-  if (!el('bk-price') || !S.bk) return;
-  var poin = S.bk.tarif * (s ? s.x : 1), bal = S.credit ? S.credit.poin : null;
-  el('bk-price').textContent = nf(poin) + ' ' + tr('poin', 'pts') + ' (' + poinRp(poin) + ')';
+  if (!el('bk-go') || !S.bk) return;
+  var mode = bookMode(), chat = mode === 'chat';
+  el('bk-mode-wrap').hidden = S.bk.jenis === 'review';
+  el('bk-sum').hidden = chat; el('bk-chatinfo').hidden = !chat;
+  el('bk-note-l').textContent = chat ? tr('Ceritakan kebutuhan Anda (wajib)', 'Describe what you need (required)') : tr('Ceritakan kebutuhan Anda (opsional)', 'Describe what you need (optional)');
+  el('bk-go').textContent = chat ? tr('Kirim & mulai chat', 'Send & start chat') : tr('Booking sekarang', 'Book now');
+  var poin = S.bk.tarif, bal = S.credit ? S.credit.poin : null;
+  el('bk-price').textContent = nf(poin) + ' ' + tr('poin', 'pts') + ' (' + poinRp(poin) + ') / ' + nf(S.bk.dur) + ' ' + tr('menit', 'min');
   el('bk-bal').textContent = bal == null ? '-' : nf(bal) + ' ' + tr('poin', 'pts');
   el('bk-left').textContent = bal == null ? '-' : nf(bal - poin) + ' ' + tr('poin', 'pts');
-  el('bk-warn').hidden = !(bal != null && bal < poin);
+  el('bk-warn').hidden = chat || !(bal != null && bal < poin);
 }
 function confirmBook(btn) {
-  var p = { expert: String(btn.getAttribute('data-u')), svc: val('bk-svc') };
-  closeModal();
-  toast(tr('Mengirim permintaan booking...', 'Sending booking request...'), 'info');
+  if (!S.bk) return;
+  var mode = bookMode(), p = { expert: S.bk.u, jenis: S.bk.jenis, mode: mode, note: val('bk-note') };
+  if (mode === 'chat' && !p.note) { toast(tr('Ceritakan dulu kebutuhan Anda supaya pakar bisa memberi penawaran.', 'Describe what you need so the expert can make an offer.'), 'err'); el('bk-note').focus(); return; }
+  busyEl(btn, true);
   api('apiCreateBooking', [S.token, p], function (res) {
+    busyEl(btn, false);
     if (!res.ok) { toast(res.msg, 'err'); maybeTopUp(res.msg); return; }
-    setWallet(res.wallet);
+    if (res.wallet) setWallet(res.wallet);
     resetStats();
-    toast(tr('Booking terkirim', 'Booking sent') + (res.row ? ': ' + res.row[0] : '') + '. ' + nf(res.row ? res.row[9] : 0) + ' ' + tr('poin ditahan sampai sesi selesai.', 'points held until the session ends.'), 'ok');
-  }, function (m) { toast(m, 'err'); });
+    if (mode === 'chat') { toast(tr('Permintaan terkirim. Silakan lanjut ngobrol dengan pakar.', 'Request sent. Carry on chatting with the expert.'), 'ok'); openBookingDetail(res.b); }
+    else { closeModal(); toast(tr('Booking terkirim', 'Booking sent') + ': ' + res.b[0] + '. ' + nf(res.b[12]) + ' ' + tr('poin ditahan sampai sesi selesai.', 'points held until the session ends.'), 'ok'); }
+    if (S.view === 'bookings') loadMore('bookings', true);
+  }, function (m) { busyEl(btn, false); toast(m, 'err'); });
+}
+
+/* ----- Detail booking: info, tindakan, dan chat ----- */
+var BK_POLL = 6000;
+function bkFind(id, tgl) {
+  var rows = S.bkRows || [];
+  for (var i = 0; i < rows.length; i++) if (rows[i][0] === id && rows[i][1] === tgl) return rows[i];
+  return null;
+}
+function openBookingFromRow(btn) {
+  var tr0 = btn.closest('tr'), id = tr0.getAttribute('data-id'), tgl = tr0.getAttribute('data-tgl');
+  var b = bkFind(id, tgl);
+  if (b) openBookingDetail(b);
+  else { S.bkd = { id: id, tgl: tgl, b: null, msgs: [], n: 0 }; openModal('<div class="loader"><span class="spin"></span></div>'); pollBookingChat(true); }
+}
+function openBookingDetail(b) {
+  stopBookingPoll();
+  S.bkd = { id: b[0], tgl: b[1], b: b, msgs: [], n: 0 };
+  openModal('<div class="bkd" id="bkd"></div>');
+  el('sheet').classList.add('wide');
+  renderBookingDetail();
+  pollBookingChat(true);
+}
+function stopBookingPoll() { if (S.bkPoll) { clearTimeout(S.bkPoll); S.bkPoll = null; } }
+function pollBookingChat(first) {
+  stopBookingPoll();
+  var d = S.bkd;
+  if (!d || el('modal').hidden) return;
+  if (document.visibilityState === 'hidden' && !first) { S.bkPoll = setTimeout(function () { pollBookingChat(false); }, BK_POLL); return; }
+  api('apiBookingChat', [S.token, d.id, d.tgl, d.n], function (res) {
+    if (S.bkd !== d) return;
+    if (res.ok) {
+      var changed = !d.b || JSON.stringify(d.b) !== JSON.stringify(res.b);
+      d.b = res.b;
+      if (res.msgs && res.msgs.length) { d.msgs = d.msgs.concat(res.msgs); d.n = res.total; }
+      if (!el('bkd')) { openModal('<div class="bkd" id="bkd"></div>'); el('sheet').classList.add('wide'); changed = true; }
+      if (changed) { renderBookingDetail(); syncBookingRow(res.b); } else if (res.msgs && res.msgs.length) renderChat();
+    } else if (first) { toast(res.msg, 'err'); }
+    if (BK_FINAL.indexOf(d.b ? d.b[7] : '') < 0) S.bkPoll = setTimeout(function () { pollBookingChat(false); }, BK_POLL);
+  }, function () { if (S.bkd === d) S.bkPoll = setTimeout(function () { pollBookingChat(false); }, BK_POLL * 2); });
+}
+var BK_FINAL = ['Selesai', 'Ditolak', 'Dibatalkan'];
+// Perbarui baris di tabel daftar booking tanpa memuat ulang seluruh daftar
+function syncBookingRow(b) {
+  if (!b) return;
+  var rows = S.bkRows || [];
+  for (var i = 0; i < rows.length; i++) if (rows[i][0] === b[0] && rows[i][1] === b[1]) rows[i] = b;
+  var trs = document.querySelectorAll('#box-bookings tr[data-id]');
+  for (var j = 0; j < trs.length; j++) {
+    if (trs[j].getAttribute('data-id') === b[0] && trs[j].getAttribute('data-tgl') === b[1]) {
+      var tmp = document.createElement('tbody'); tmp.innerHTML = bookingRow(b, false);
+      trs[j].parentNode.replaceChild(tmp.firstChild, trs[j]);
+    }
+  }
+}
+function fmtStamp(s) { return s ? fmtDate(s) : '-'; }
+function unitTxt(u, n) { return u === 'hari' ? tr('hari', n === 1 ? 'day' : 'days') : tr('menit', 'min'); }
+function renderBookingDetail() {
+  var d = S.bkd, box = el('bkd');
+  if (!d || !box || !d.b) return;
+  var b = d.b, me = role(), st = b[7], unit = b[15] || 'menit', poin = Number(b[12]) || 0, dur = Number(b[14]) || 0;
+  var other = me === 'Client' ? b[9] : (me === 'Expert' ? b[8] : b[8] + ' → ' + b[9]);
+  var h = '<div class="bkd-head"><div><p class="eyebrow">' + esc(b[0]) + ' &bull; ' + esc(fmtDate(b[1])) + '</p><h3>' + esc(b[13] === 'review' ? tr('Review dokumen', 'Document review') : tr('Konsultasi', 'Consultation')) + '</h3><p class="muted sm">' + (me === 'Client' ? tr('dengan ', 'with ') : '') + esc(other) + '</p></div>' + badge(st) + '</div>';
+  h += '<div class="bkd-grid">';
+  h += '<div><span>' + tr('Harga', 'Price') + '</span><b>' + (poin ? nf(poin) + ' ' + tr('poin', 'pts') : '-') + '</b>' + (poin ? '<small>' + poinRp(poin) + '</small>' : '') + '</div>';
+  h += '<div><span>' + tr('Durasi', 'Length') + '</span><b>' + (dur ? nf(dur) + ' ' + unitTxt(unit, dur) : '-') + '</b></div>';
+  if (b[16]) h += '<div><span>' + tr('Tenggat', 'Deadline') + '</span><b class="' + (b[20] === '1' ? 'bad' : '') + '">' + esc(fmtStamp(b[16])) + '</b></div>';
+  else if (b[21]) h += '<div><span>' + tr('Dimulai', 'Started') + '</span><b>' + esc(fmtStamp(b[21])) + '</b></div>';
+  if (b[19]) h += '<div><span>' + tr('Cair otomatis', 'Auto-release') + '</span><b>' + esc(fmtStamp(b[19])) + '</b></div>';
+  h += '</div>';
+  h += '<div class="bkd-act">' + bookingActions(b) + '</div>';
+  h += '<div class="chat" id="bk-chat" aria-live="polite"></div>';
+  if (BK_FINAL.indexOf(st) < 0) h += '<div class="chat-in"><textarea class="inp" id="bk-msg" maxlength="' + ((S.cfg.book || {}).chatMax || 1000) + '" rows="1" placeholder="' + tr('Tulis pesan... (bagikan dokumen lewat link)', 'Write a message... (share documents as a link)') + '"></textarea><button class="btn" id="bk-send" data-action="bk-send" aria-label="' + tr('Kirim', 'Send') + '">' + ic('send') + '</button></div>';
+  else h += '<p class="muted sm chat-closed">' + tr('Booking sudah berakhir. Chat ditutup.', 'This booking has ended. Chat is closed.') + '</p>';
+  h += '<button class="btn ghost sm bkd-close" data-action="close-x">' + tr('Tutup', 'Close') + '</button>';
+  var keep = el('bk-msg') ? el('bk-msg').value : '';
+  box.innerHTML = h;
+  if (keep && el('bk-msg')) el('bk-msg').value = keep;
+  renderChat();
+}
+function bookingActions(b) {
+  var me = role(), st = b[7], unit = b[15] || 'menit', poin = Number(b[12]) || 0, dur = Number(b[14]) || 0, bk = S.cfg.book || {}, bm = (S.cfg.poin || {}).bookMin || 100;
+  var h = '', info = function (t, cls) { return '<p class="note ' + (cls || 'info') + '">' + t + '</p>'; };
+  var btn = function (a, label, cls) { return '<button class="btn sm ' + (cls || '') + '" data-action="bk-act" data-a="' + a + '">' + label + '</button>'; };
+  if (me === 'Expert') {
+    if (st === 'Negosiasi' || st === 'Ditawarkan') {
+      var dmin = unit === 'hari' ? bk.hariMin || 1 : bk.menitMin || 15, dmax = unit === 'hari' ? bk.hariMax || 60 : bk.menitMax || 480;
+      if (st === 'Ditawarkan') h += info(tr('Penawaran terkirim: ', 'Offer sent: ') + '<b>' + nf(poin) + ' ' + tr('poin', 'pts') + ' &middot; ' + nf(dur) + ' ' + unitTxt(unit, dur) + '</b>. ' + tr('Menunggu persetujuan client. Anda masih bisa merevisinya.', 'Waiting for the client. You can still revise it.'));
+      h += '<div class="offer-f"><div class="fld"><label for="of-poin">' + tr('Harga (poin)', 'Price (points)') + '</label><input class="inp" id="of-poin" type="number" min="' + bm + '" step="10" inputmode="numeric" value="' + (poin || (b[13] === 'review' ? '' : '')) + '" data-live="offer"></div>';
+      h += '<div class="fld"><label for="of-dur">' + (unit === 'hari' ? tr('Lama pengerjaan (hari)', 'Turnaround (days)') : tr('Durasi sesi (menit)', 'Session length (minutes)')) + '</label><input class="inp" id="of-dur" type="number" min="' + dmin + '" max="' + dmax + '" inputmode="numeric" value="' + (dur || '') + '" data-live="offer"></div></div>';
+      h += '<p class="hint" id="of-hint"></p>';
+      h += '<div class="act-btns">' + btn('tawar', st === 'Ditawarkan' ? tr('Revisi penawaran', 'Revise offer') : tr('Kirim penawaran', 'Send offer')) + btn('tolak', tr('Tolak', 'Decline'), 'ghost danger') + '</div>';
+    } else if (st === 'Menunggu') {
+      h += info(tr('Client booking langsung dengan tarif patokan Anda. Poin client sudah ditahan.', 'The client booked at your standard rate. Their points are already held.'));
+      h += '<div class="act-btns">' + btn('terima', tr('Terima', 'Accept')) + btn('tolak', tr('Tolak', 'Decline'), 'ghost danger') + '</div>';
+    } else if (st === 'Berjalan') {
+      h += info(b[16] ? tr('Selesaikan sebelum tenggat ', 'Finish before the deadline ') + esc(fmtStamp(b[16])) + '.' : tr('Atur jadwal sesi lewat chat. Tandai selesai setelah sesi berakhir.', 'Arrange the session time in chat. Mark it done once the session is over.'));
+      h += '<div class="act-btns">' + btn('selesai', tr('Tandai selesai', 'Mark as done')) + '</div>';
+    } else if (st === 'Menunggu Konfirmasi') {
+      h += info(tr('Menunggu konfirmasi client. Bila tidak dikonfirmasi, poin cair otomatis pada ', 'Waiting for the client to confirm. If they do not, the points are released automatically on ') + esc(fmtStamp(b[19])) + '.');
+    }
+  } else if (me === 'Client') {
+    if (st === 'Negosiasi') {
+      h += info(tr('Menunggu pakar membalas dan mengirim penawaran. Belum ada poin yang dipotong.', 'Waiting for the expert to reply and send an offer. No points have been taken.'));
+      h += '<div class="act-btns">' + btn('batal', tr('Batalkan permintaan', 'Cancel request'), 'ghost danger') + '</div>';
+    } else if (st === 'Ditawarkan') {
+      var bal = S.credit ? S.credit.poin : null;
+      h += '<div class="offer-card"><span>' + tr('Penawaran pakar', 'Expert offer') + '</span><b>' + nf(poin) + ' ' + tr('poin', 'pts') + ' &middot; ' + nf(dur) + ' ' + unitTxt(unit, dur) + '</b><small>' + poinRp(poin) + (bal != null ? ' &bull; ' + tr('saldo Anda ', 'your balance ') + nf(bal) + ' ' + tr('poin', 'pts') : '') + '</small></div>';
+      if (bal != null && bal < poin) h += '<div class="note warn">' + tr('Poin Anda belum cukup. ', 'You do not have enough points. ') + '<button class="lnk" type="button" data-action="topup">' + tr('Top-up sekarang', 'Top up now') + '</button></div>';
+      h += '<p class="muted sm">' + tr('Setelah setuju, poin ditahan sampai pekerjaan selesai.', 'Once you agree, the points are held until the work is done.') + (unit === 'hari' ? ' ' + tr('Bila pakar melewati tenggat, Anda boleh membatalkan dan poin kembali utuh.', 'If the expert misses the deadline, you can cancel and get every point back.') : '') + '</p>';
+      h += '<div class="act-btns">' + btn('setuju', tr('Setujui & bayar', 'Accept & pay')) + btn('batal', tr('Batalkan', 'Cancel'), 'ghost danger') + '</div>';
+    } else if (st === 'Menunggu') {
+      h += info(tr('Menunggu pakar menerima booking. Poin Anda ditahan dan kembali utuh bila pakar menolak atau Anda membatalkan.', 'Waiting for the expert to accept. Your points are held and come back in full if the expert declines or you cancel.'));
+      h += '<div class="act-btns">' + btn('batal', tr('Batalkan', 'Cancel'), 'ghost danger') + '</div>';
+    } else if (st === 'Berjalan') {
+      if (b[20] === '1') {
+        h += info(tr('Pakar melewati tenggat. Anda boleh membatalkan dan poin kembali utuh, atau tetap menunggu.', 'The expert missed the deadline. You can cancel and get every point back, or keep waiting.'), 'warn');
+        h += '<div class="act-btns">' + btn('batal', tr('Batalkan & minta poin kembali', 'Cancel & get points back'), 'danger') + '</div>';
+      } else h += info(b[16] ? tr('Pakar sedang mengerjakan. Tenggat: ', 'The expert is working on it. Deadline: ') + esc(fmtStamp(b[16])) + '.' : tr('Sesi sedang berjalan. Atur jadwal lewat chat.', 'The session is under way. Arrange the time in chat.'));
+    } else if (st === 'Menunggu Konfirmasi') {
+      h += info(tr('Pakar menandai pekerjaan selesai. Konfirmasi bila sudah sesuai. Tanpa konfirmasi, poin cair otomatis pada ', 'The expert marked the work as done. Confirm if you are happy. Without confirmation, the points are released on ') + esc(fmtStamp(b[19])) + '.');
+      h += '<div class="act-btns">' + btn('konfirmasi', tr('Konfirmasi selesai', 'Confirm done')) + '</div>';
+    } else if (st === 'Selesai' && b[11] === '1') {
+      h += '<div class="act-btns"><button class="btn sm ghost" data-action="bk-rate">' + tr('Beri ulasan', 'Write review') + '</button></div>';
+    }
+  } else {
+    if (st === 'Menunggu Konfirmasi') h += '<div class="act-btns">' + btn('konfirmasi', tr('Konfirmasi & cairkan ke pakar', 'Confirm & release to expert')) + btn('batal', tr('Batalkan & kembalikan poin', 'Cancel & refund'), 'ghost danger') + '</div>';
+    else if (BK_FINAL.indexOf(st) < 0) h += '<div class="act-btns">' + btn('batal', tr('Batalkan booking', 'Cancel booking') + (Number(b[12]) && st !== 'Negosiasi' && st !== 'Ditawarkan' ? tr(' & kembalikan poin', ' & refund') : ''), 'ghost danger') + '</div>';
+  }
+  return h;
+}
+function updateOfferHint() {
+  var x = el('of-hint');
+  if (!x) return;
+  var p = Math.floor(Number(val('of-poin')) || 0);
+  x.textContent = p ? '= ' + poinRp(p) + tr('. Client melihat penawaran ini dan bisa langsung menyetujuinya.', '. The client sees this offer and can accept it right away.') : '';
+}
+function renderChat() {
+  var d = S.bkd, box = el('bk-chat');
+  if (!d || !box) return;
+  var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  var h = '';
+  if (d.b && d.b[17] && !d.msgs.length) h += '<p class="muted sm">' + escBr(d.b[17]) + '</p>';
+  for (var i = 0; i < d.msgs.length; i++) {
+    var m = d.msgs[i], mine = m[2] === S.user.username;
+    if (m[5] === 'sistem') { h += '<div class="msg sys"><span>' + esc(m[4]) + '</span><time>' + esc(fmtStamp(m[1])) + '</time></div>'; continue; }
+    if (m[5] === 'tawar') {
+      var o = String(m[4]).split('|');
+      h += '<div class="msg offer' + (mine ? ' me' : '') + '"><span>' + ic('coin') + tr('Penawaran: ', 'Offer: ') + '<b>' + nf(o[0]) + ' ' + tr('poin', 'pts') + ' &middot; ' + nf(o[1]) + ' ' + unitTxt(o[2], Number(o[1])) + '</b></span><time>' + esc(m[3]) + ' &bull; ' + esc(fmtStamp(m[1])) + '</time></div>';
+      continue;
+    }
+    h += '<div class="msg' + (mine ? ' me' : '') + '"><p>' + linkify(m[4]) + '</p><time>' + (mine ? '' : esc(m[3]) + ' &bull; ') + esc(fmtStamp(m[1])) + '</time></div>';
+  }
+  if (!h) h = '<p class="muted sm">' + tr('Belum ada pesan.', 'No messages yet.') + '</p>';
+  box.innerHTML = h;
+  if (atBottom || !S.bkd.scrolled) { box.scrollTop = box.scrollHeight; S.bkd.scrolled = true; }
+}
+// Tautan di chat bisa diklik (dokumen dibagikan lewat link)
+function linkify(t) {
+  return escBr(t).replace(/(https?:\/\/[^\s<]+|(?:drive|docs)\.google\.com\/[^\s<]+)/g, function (u) {
+    var href = /^https?:/.test(u) ? u : 'https://' + u;
+    return '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + u + '</a>';
+  });
+}
+function sendBookingChat() {
+  var d = S.bkd, t = val('bk-msg');
+  if (!d || !t) return;
+  var mine = ['...', nowStamp(), S.user.username, S.user.nama, t, 'teks', true];
+  d.msgs.push(mine); el('bk-msg').value = ''; renderChat();
+  var box = el('bk-chat'); if (box) box.scrollTop = box.scrollHeight;
+  api('apiSendBookingChat', [S.token, d.id, d.tgl, t], function (res) {
+    var k = d.msgs.indexOf(mine);
+    if (!res.ok) { if (k >= 0) d.msgs.splice(k, 1); renderChat(); if (el('bk-msg') && !val('bk-msg')) el('bk-msg').value = t; toast(res.msg, 'err'); return; }
+    if (k >= 0) d.msgs.splice(k, 1);
+    pollBookingChat(false); // ambil pesan resmi dari server (termasuk balasan baru)
+  }, function (m) { var k = d.msgs.indexOf(mine); if (k >= 0) d.msgs.splice(k, 1); renderChat(); if (el('bk-msg')) el('bk-msg').value = t; toast(m, 'err'); });
+}
+var BK_CONFIRM = {
+  tolak: ['Tolak booking ini?', 'Decline this booking?'],
+  batal: ['Batalkan booking ini?', 'Cancel this booking?'],
+  setuju: ['Setujui penawaran ini? Poin akan ditahan sampai pekerjaan selesai.', 'Accept this offer? The points will be held until the work is done.'],
+  selesai: ['Tandai pekerjaan selesai? Client punya 3 hari untuk konfirmasi.', 'Mark the work as done? The client has 3 days to confirm.'],
+  konfirmasi: ['Konfirmasi selesai? Poin akan dikirim ke pakar.', 'Confirm the work is done? The points go to the expert.']
+};
+function bookingAct(btn) {
+  var d = S.bkd, a = btn.getAttribute('data-a');
+  if (!d || !d.b) return;
+  var p = {};
+  if (a === 'tawar') {
+    p = { poin: val('of-poin'), durasi: val('of-dur') };
+    if (!p.poin || !p.durasi) { toast(tr('Isi harga dan durasi dulu.', 'Fill in the price and length first.'), 'err'); return; }
+  } else if (BK_CONFIRM[a] && !confirm(tr(BK_CONFIRM[a][0], BK_CONFIRM[a][1]))) return;
+  busyEl(btn, true);
+  api('apiBookingAction', [S.token, d.id, d.tgl, a, p], function (res) {
+    busyEl(btn, false);
+    if (!res.ok) { toast(res.msg, 'err'); maybeTopUp(res.msg); return; }
+    if (res.wallet) setWallet(res.wallet);
+    d.b = res.b; syncBookingRow(res.b); resetStats();
+    renderBookingDetail();
+    pollBookingChat(false);
+    var done = { tawar: tr('Penawaran terkirim.', 'Offer sent.'), terima: tr('Booking diterima.', 'Booking accepted.'), tolak: tr('Booking ditolak.', 'Booking declined.'), setuju: tr('Penawaran disetujui. Poin ditahan.', 'Offer accepted. Points held.'), selesai: tr('Ditandai selesai. Menunggu konfirmasi client.', 'Marked as done. Waiting for the client.'), konfirmasi: tr('Selesai. Poin dikirim ke pakar.', 'Done. Points sent to the expert.'), batal: tr('Booking dibatalkan.', 'Booking cancelled.') };
+    toast(done[a] || tr('Tersimpan.', 'Saved.'), 'ok');
+  }, function (m) { busyEl(btn, false); toast(m, 'err'); });
 }
 
 /* ----- Perubahan status (Admin/Pakar) dengan optimistic UI + rollback ----- */
@@ -2619,7 +2873,7 @@ function changeStatus(sel, fn, argsFn, after) {
   }, back);
 }
 function saveProfile() {
-  var p = { nama: val('pf-nama'), bio: val('pf-bio'), bidang: el('pf-bidang') ? val('pf-bidang') : '', tarif: el('pf-tarif') ? val('pf-tarif') : '' };
+  var p = { nama: val('pf-nama'), bio: val('pf-bio'), bidang: el('pf-bidang') ? val('pf-bidang') : '', tarif: el('pf-tarif') ? val('pf-tarif') : '', durasi: el('pf-dur') ? val('pf-dur') : '', tarifReview: el('pf-rev') ? val('pf-rev') : '' };
   if (!p.nama) { toast(tr('Nama wajib diisi.', 'Name is required.'), 'err'); return; }
   busy('btn-pf', true);
   api('apiUpdateProfile', [S.token, p], function (res) {
@@ -2706,6 +2960,11 @@ document.addEventListener('click', function (e) {
   else if (a === 'send-ans') sendAnswer(t);
   else if (a === 'book') openBook(t.closest('[data-user]'));
   else if (a === 'confirm-book') confirmBook(t);
+  else if (a === 'bk-jenis') setBookJenis(t);
+  else if (a === 'bk-open') openBookingFromRow(t);
+  else if (a === 'bk-act') bookingAct(t);
+  else if (a === 'bk-send') sendBookingChat();
+  else if (a === 'bk-rate') rateFromDetail();
   else if (a === 'close-x') closeModal();
   else if (a === 'save-profile') saveProfile();
   else if (a === 'pick-photo') { if (el('pf-file')) el('pf-file').click(); }
@@ -2724,6 +2983,7 @@ document.addEventListener('input', function (e) {
   else if (lv === 'bounty') updateBountyHint();
   else if (lv === 'cash') updateCashSum();
   else if (lv === 'tarif') updateTarifHint();
+  else if (lv === 'offer') updateOfferHint();
   else if (lv === 'pal-custom') customPalette(String(t.value), false);
   else if (lv === 'search') {
     var key = t.getAttribute('data-key');
@@ -2741,6 +3001,7 @@ document.addEventListener('change', function (e) {
   else if (lv === 'pal-custom') customPalette(String(t.value), true);
   else if (lv === 'rv-chk') updateReviewButtons();
   else if (lv === 'bk') updateBookSum();
+  else if (lv === 'offer') updateOfferHint();
   else if (lv === 'bounty') updateBountyHint();
   else if (lv === 'cash') updateCashSum();
   else if (lv === 'tarif') updateTarifHint();
@@ -2757,6 +3018,7 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') { closeModal(); closeDrops(); return; }
   if (e.key !== 'Enter') return;
   var id = e.target && e.target.id;
+  if (id === 'bk-msg') { if (!e.shiftKey) { e.preventDefault(); sendBookingChat(); } return; }
   if (id === 'l-user' || id === 'l-pass') doLogin();
   else if (id === 'r-pass') doRegister();
   else if (id === 'g-search') globalSearch(String(e.target.value).trim());
@@ -2764,7 +3026,7 @@ document.addEventListener('keydown', function (e) {
 });
 
 /* ============ Admin: Impor data dari app lama (spreadsheet lama hanya dibaca) ============ */
-var IMPORT_SHEETS = [['users', 'Users'], ['credits', 'Credits'], ['photos', 'Photos'], ['screenings', 'Screenings'], ['contracts', 'Contracts'], ['copyrights', 'Copyrights'], ['taxes', 'Taxes'], ['posts', 'Posts'], ['questions', 'Questions'], ['answers', 'Answers'], ['bookings', 'Bookings'], ['reviews', 'Reviews'], ['ledger', 'Ledger'], ['cashouts', 'Cashouts']];
+var IMPORT_SHEETS = [['users', 'Users'], ['credits', 'Credits'], ['photos', 'Photos'], ['screenings', 'Screenings'], ['contracts', 'Contracts'], ['copyrights', 'Copyrights'], ['taxes', 'Taxes'], ['posts', 'Posts'], ['questions', 'Questions'], ['answers', 'Answers'], ['bookings', 'Bookings'], ['bookchat', 'BookingChat'], ['reviews', 'Reviews'], ['ledger', 'Ledger'], ['cashouts', 'Cashouts']];
 VIEWS['import'] = function () {
   var h = head(tr('Migrasi', 'Migration'), tr('Impor data dari app lama', 'Import data from the old app'), tr('Data lama hanya DIBACA. Aman diulang: baris yang sudah ada tidak akan dobel.', 'The old data is only READ. Safe to repeat: existing rows are never duplicated.'));
   h += '<div class="card"><div class="fld"><label for="im-src">' + tr('URL atau ID spreadsheet app lama', 'Old app spreadsheet URL or ID') + '</label>';
@@ -2829,7 +3091,7 @@ var LP_SLIDES = [
   { k: ['UNTUK UMKM & PROFESIONAL', 'FOR BUSINESSES & PROFESSIONALS'], t: ['Berusaha dengan tenang. Sisanya kami yang jaga.', 'Build freely. We’ll protect the rest.'], s: ['Untuk pelaku UMKM, wirausaha, profesional, dan kreator. Ikuti pakar terverifikasi, tanya lewat bounty, lalu booking konsultasi.', 'For small businesses, entrepreneurs, professionals and creators. Follow verified experts, ask through a bounty, then book a consultation.'], v: 'laptop' },
   { k: ['BOUNTY PERTANYAAN', 'QUESTION BOUNTY'], t: ['Pasang poin, pakar berlomba menjawab', 'Put points on it. Experts compete to answer.'], s: ['Anda pilih jawaban terbaik. Tidak ada jawaban dalam 7 hari? Poin kembali utuh.', 'You pick the best answer. No answer in 7 days? You get every point back.'], v: 'bounty' },
   { k: ['PAKAR TERVERIFIKASI', 'VERIFIED EXPERTS'], t: ['Pakar yang lolos screening, rating yang jujur', 'Screened experts. Honest ratings.'], s: ['Izin praktik dan latar belakang setiap pakar diperiksa admin. Ulasan datang dari client sungguhan.', 'Every expert has their licence and background checked. Reviews come from real clients.'], v: 'phone' },
-  { k: ['BOOKING KONSULTASI', 'BOOK A CONSULTATION'], t: ['Kasus pribadi? Bicara langsung dengan pakarnya', 'A personal case? Talk to the expert directly.'], s: ['Tarif dalam poin ditentukan pakar. Poin ditahan sampai sesi selesai, dan kembali bila pakar menolak.', 'Experts set their own rate in points. Points are held until the session ends and come back if they decline.'], v: 'book' }
+  { k: ['BOOKING KONSULTASI', 'BOOK A CONSULTATION'], t: ['Kasus pribadi? Bicara langsung dengan pakarnya', 'A personal case? Talk to the expert directly.'], s: ['Pakar menentukan tarif dan durasinya. Booking langsung, atau chat dulu untuk sepakati harga. Poin ditahan sampai selesai.', 'Experts set their own price and length. Book straight away, or chat first to agree on a price. Points are held until the work is done.'], v: 'book' }
 ];
 function lpReduced() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
 
@@ -2933,7 +3195,7 @@ function renderLanding() {
   // Fitur
   var feats = [['feed', tr('Feed sosial hukum', 'A legal social feed'), tr('Ikuti pakar, baca tips singkat, dan ikut berdiskusi. Gratis.', 'Follow experts, read short tips and join the conversation. Free.')],
     ['trophy', tr('Bounty pertanyaan', 'Question bounty'), tr('Pasang poin di pertanyaan Anda, pilih jawaban terbaik dari beberapa pakar.', 'Put points on your question and pick the best of several expert answers.')],
-    ['calendar', tr('Booking konsultasi', 'Consultation booking'), tr('Sesi pribadi 1-on-1 dengan pakar pilihan. Tarif dalam poin.', 'A private one-to-one session with the expert you choose, priced in points.')],
+    ['calendar', tr('Booking konsultasi', 'Consultation booking'), tr('Konsultasi atau review dokumen. Harga dan durasi bisa disepakati lewat chat.', 'A consultation or a document review. Agree on price and length in chat.')],
     ['shield', tr('Pakar terverifikasi', 'Verified experts'), tr('Setiap pakar lolos screening izin praktik dan latar belakang.', 'Every expert passes a licence and background check.')],
     ['star', tr('Rating & ulasan', 'Ratings & reviews'), tr('Pilih pakar berdasarkan ulasan dari client sungguhan.', 'Choose experts based on reviews from real clients.')]];
   var fh = '<div class="lp-feat">';
