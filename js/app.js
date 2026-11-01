@@ -25,10 +25,11 @@ var STATUS = {
   copyrights: ['Dilaporkan', 'Dalam Proses', 'Selesai', 'Ditolak'],
   bookings: ['Menunggu', 'Diterima', 'Selesai', 'Ditolak'],
   verify: ['Menunggu', 'Dalam Screening', 'Perlu Revisi', 'Disetujui', 'Ditolak'],
-  ask: ['Terbuka', 'Terjawab'],
+  ask: ['Terbuka', 'Terjawab', 'Selesai', 'Dikembalikan'],
+  cashouts: ['Menunggu', 'Dibayar', 'Ditolak'],
   reviews: ['Perlu Tinjau', 'Tampil', 'Disembunyikan']
 };
-var ST_EN = { 'Menunggu Verifikasi': 'Pending review', 'Terverifikasi': 'Verified', 'Ditolak': 'Rejected', 'Dilaporkan': 'Reported', 'Dalam Proses': 'In progress', 'Selesai': 'Completed', 'Menunggu': 'Pending', 'Diterima': 'Accepted', 'Terbuka': 'Open', 'Terjawab': 'Answered', 'Aktif': 'Active', 'Dalam Screening': 'In screening', 'Perlu Revisi': 'Needs revision', 'Disetujui': 'Approved', 'Perlu Tinjau': 'Needs review', 'Tampil': 'Visible', 'Disembunyikan': 'Hidden' };
+var ST_EN = { 'Menunggu Verifikasi': 'Pending review', 'Terverifikasi': 'Verified', 'Ditolak': 'Rejected', 'Dilaporkan': 'Reported', 'Dalam Proses': 'In progress', 'Selesai': 'Completed', 'Menunggu': 'Pending', 'Diterima': 'Accepted', 'Terbuka': 'Open', 'Terjawab': 'Answered', 'Aktif': 'Active', 'Dalam Screening': 'In screening', 'Perlu Revisi': 'Needs revision', 'Disetujui': 'Approved', 'Perlu Tinjau': 'Needs review', 'Tampil': 'Visible', 'Disembunyikan': 'Hidden', 'Dikembalikan': 'Refunded', 'Dibayar': 'Paid' };
 var CREATE_FN = { contracts: 'apiCreateContract', copyrights: 'apiCreateCopyright', taxes: 'apiCreateTax' };
 var MONTHS = { id: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'], en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] };
 
@@ -75,6 +76,8 @@ var PATHS = {
   doc: 'M6 2h9l5 5v15H6zM14 2v6h6M9 13h7M9 17h7',
   db: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
   copyright: 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18zM14.8 9.6a3.4 3.4 0 1 0 0 4.8',
+  check: 'M5 12.5l4.2 4.2L19 7',
+  trophy: 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M10 17h4',
   coin: 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18zM15 9.5c-.6-1-1.7-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.3 0-2.4-.5-3-1.5M12 6v2m0 8v2',
   users: 'M9 4.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM2.5 20c.5-3.5 3-5.5 6.5-5.5s6 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .6 3.3 2.4 3.5 5.2',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5',
@@ -160,7 +163,8 @@ function nowStamp() {
 function shortTxt(s, n) { s = String(s || ''); return s.length > n ? s.substring(0, n) + '...' : s; }
 function stLabel(st) { return S.lang === 'en' && ST_EN[st] ? ST_EN[st] : st; }
 function toneOf(st) {
-  if (/Terverifikasi|Selesai|Terjawab|Aktif|Disetujui/.test(st)) return 'b-ok';
+  if (/Terverifikasi|Selesai|Terjawab|Aktif|Disetujui|Dibayar/.test(st)) return 'b-ok';
+  if (/Dikembalikan/.test(st)) return 'b-info';
   if (/Ditolak|Disembunyikan/.test(st)) return 'b-bad';
   if (/Tampil/.test(st)) return 'b-ok';
   if (/Proses|Diterima|Screening/.test(st)) return 'b-info';
@@ -639,9 +643,9 @@ function forceLogout() {
 }
 function navItems() {
   var r = role();
-  if (r === 'Admin') return [['home', tr('Beranda', 'Home'), 'home'], ['verify', tr('Screening Pakar', 'Expert Screening'), 'shield'], ['contracts', tr('Kontrak', 'Contracts'), 'doc'], ['copyrights', tr('Hak Cipta', 'Copyright'), 'copyright'], ['bookings', 'Booking', 'calendar'], ['recap', tr('Rekap Kreator', 'Creators'), 'users'], ['xrecap', tr('Rekap Pakar', 'Experts'), 'chart'], ['feed', 'Feed', 'feed'], ['reviews', tr('Moderasi Ulasan', 'Review Moderation'), 'star'], ['import', tr('Impor Data', 'Import Data'), 'db']];
-  if (r === 'Expert') return [['home', tr('Beranda', 'Home'), 'home'], ['screening', 'Screening', 'shield'], ['feed', 'Feed', 'feed'], ['ask', tr('Tanya Pakar', 'Q&A'), 'ask'], ['bookings', 'Booking', 'calendar'], ['earnings', tr('Pendapatan', 'Earnings'), 'wallet'], ['myreviews', tr('Ulasan Saya', 'My Reviews'), 'star']];
-  return [['home', tr('Beranda', 'Home'), 'home'], ['feed', 'Feed', 'feed'], ['ask', tr('Tanya Pakar', 'Q&A'), 'ask'], ['experts', tr('Pakar', 'Experts'), 'experts'], ['bookings', 'Booking', 'calendar'], ['contracts', tr('Kontrak', 'Contracts'), 'doc'], ['copyrights', tr('Hak Cipta', 'Copyright'), 'copyright'], ['taxes', tr('Pajak', 'Tax'), 'coin']];
+  if (r === 'Admin') return [['home', tr('Beranda', 'Home'), 'home'], ['verify', tr('Screening Pakar', 'Expert Screening'), 'shield'], ['ask', 'Bounty', 'ask'], ['bookings', 'Booking', 'calendar'], ['cashouts', tr('Pencairan', 'Payouts'), 'wallet'], ['recap', tr('Rekap Client', 'Clients'), 'users'], ['xrecap', tr('Rekap Pakar', 'Experts'), 'chart'], ['feed', 'Feed', 'feed'], ['reviews', tr('Moderasi Ulasan', 'Review Moderation'), 'star']];
+  if (r === 'Expert') return [['home', tr('Beranda', 'Home'), 'home'], ['feed', 'Feed', 'feed'], ['ask', 'Bounty', 'ask'], ['bookings', 'Booking', 'calendar'], ['wallet', tr('Dompet', 'Wallet'), 'wallet'], ['screening', 'Screening', 'shield'], ['myreviews', tr('Ulasan Saya', 'My Reviews'), 'star']];
+  return [['home', tr('Beranda', 'Home'), 'home'], ['feed', 'Feed', 'feed'], ['ask', 'Bounty', 'ask'], ['experts', tr('Pakar', 'Experts'), 'experts'], ['bookings', 'Booking', 'calendar'], ['wallet', tr('Dompet', 'Wallet'), 'wallet'], ['taxes', tr('Pajak', 'Tax'), 'coin']];
 }
 // Navigasi atas: maksimal 5 menu utama, sisanya masuk panel "Lainnya"
 var NAV_MAX = 5;
@@ -665,7 +669,7 @@ function buildShell() {
   }
   el('nav').innerHTML = h;
   var r = role();
-  el('g-search').placeholder = r === 'Admin' ? tr('Cari kontrak, kreator, ID...', 'Search contracts, creators, IDs...') : (r === 'Expert' ? tr('Cari pertanyaan atau topik...', 'Search questions or topics...') : tr('Cari pakar atau bidang hukum...', 'Search experts or legal areas...'));
+  el('g-search').placeholder = r === 'Admin' ? tr('Cari booking, client, ID...', 'Search bookings, clients, IDs...') : (r === 'Expert' ? tr('Cari pertanyaan atau topik...', 'Search questions or topics...') : tr('Cari pakar atau bidang hukum...', 'Search experts or legal areas...'));
   el('g-search').setAttribute('aria-label', tr('Pencarian', 'Search'));
   el('lbl-notif').textContent = tr('Notifikasi', 'Notifications');
   el('lbl-notif-h').textContent = tr('Notifikasi', 'Notifications');
@@ -680,7 +684,7 @@ function buildShell() {
 }
 function roleLabel() {
   var r = role();
-  return r === 'Admin' ? tr('Admin / Tim Legal', 'Admin / Legal team') : (r === 'Expert' ? tr('Pakar hukum', 'Legal expert') : tr('Kreator / Client', 'Creator / Client'));
+  return r === 'Admin' ? tr('Admin / Tim Legal', 'Admin / Legal team') : (r === 'Expert' ? tr('Pakar hukum', 'Legal expert') : 'Client');
 }
 function roleLine() {
   var u = S.user, s = roleLabel();
@@ -741,20 +745,21 @@ function renderLeft() {
 function paintLeftStats() {
   var box = el('pc-stats');
   if (!box || !S.user) return;
-  var r = role(), hub = S.hub || {}, st = S.stats, c = S.credit, rows = [];
+  var r = role(), hub = S.hub || {}, c = S.credit, rows = [];
   var v = function (x, suf) { return x == null ? '-' : nf(x) + (suf || ''); };
   if (r === 'Client') {
-    rows.push(['topup', '', tr('Saldo poin', 'Points'), c ? v(c.poin) : '-']);
-    rows.push(['topup', '', tr('Kuota bulanan', 'Monthly quota'), c ? v(c.quota, 'x') : '-']);
+    rows.push(['nav', 'wallet', tr('Saldo poin', 'Points'), c ? v(c.poin) : '-']);
+    rows.push(['nav', 'wallet', tr('Paket', 'Plan'), c ? (c.pro ? '<span class="pro-b">PRO</span>' : tr('Gratis', 'Free')) : '-']);
+    rows.push(['nav', 'ask', tr('Bounty aktif', 'Active bounties'), v(hub.bountyOpen)]);
     rows.push(['nav', 'bookings', tr('Booking menunggu', 'Pending bookings'), v(hub.pending)]);
   } else if (r === 'Expert') {
+    rows.push(['nav', 'wallet', tr('Saldo poin', 'Points'), c ? v(c.poin) : '-']);
     rows.push(['nav', 'myreviews', tr('Rating', 'Rating'), hub.reviews ? '&#9733; ' + nf1(hub.rating) + ' (' + nf(hub.reviews) + ')' : (hub.reviews === 0 ? tr('Belum ada', 'None yet') : '-')]);
-    rows.push(['nav', 'ask', tr('Jawaban', 'Answers'), v(hub.answers)]);
-    rows.push(['nav', 'feed', tr('Postingan', 'Posts'), v(hub.posts)]);
+    rows.push(['nav', 'ask', tr('Bounty dimenangkan', 'Bounties won'), v(hub.bountyWins)]);
     rows.push(['nav', 'bookings', tr('Konsultasi selesai', 'Completed sessions'), v(hub.done)]);
   } else {
     rows.push(['nav', 'verify', tr('Menunggu screening', 'Awaiting screening'), v(hub.pendingVerif)]);
-    rows.push(['nav', 'contracts', tr('Kontrak menunggu', 'Contracts pending'), st ? v(st.contracts.pending) : '-']);
+    rows.push(['nav', 'cashouts', tr('Pencairan menunggu', 'Payouts pending'), v(hub.cashPending)]);
     rows.push(['nav', 'xrecap', tr('Pakar terverifikasi', 'Verified experts'), v(hub.experts)]);
   }
   var h = '';
@@ -764,11 +769,10 @@ function paintLeftStats() {
 // Isi kolom kiri & notifikasi dari data server (satu kali per sesi, dipakai bersama halaman Beranda)
 function refreshSide() {
   var r = role();
-  if (r === 'Client') renderCreditWidget();
+  if (r !== 'Admin') renderCreditWidget();
   fetchHub(function (hub) {
     paintLeftStats();
-    if (r === 'Expert') { buildNotif(null, hub); return; }
-    fetchStats(function (st) { paintLeftStats(); buildNotif(st, hub); });
+    buildNotif(null, hub);
   });
 }
 
@@ -793,7 +797,7 @@ function loadRight() {
     if (!res.ok || !res.spot) { box.innerHTML = '<p class="r-empty">' + tr('Belum ada pakar pilihan bulan ini.', 'No spotlight this month yet.') + '</p>'; return; }
     var sp = res.spot;
     if (sp.foto != null && sp.username) S.photos[sp.username] = sp.foto;
-    var x = '<div class="' + (r === 'Client' ? 'item rx' : 'rx') + '" data-user="' + esc(sp.username) + '" data-nama="' + esc(sp.nama) + '">' + avatar(sp.username, sp.nama, 'lg') + '<div class="grow"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(sp.username) + '">' + esc(sp.nama) + '</button>' + verMark('1') + '</b>';
+    var x = '<div class="' + (r === 'Client' ? 'item rx' : 'rx') + '" data-user="' + esc(sp.username) + '" data-nama="' + esc(sp.nama) + '" data-tarif="' + esc(sp.tarif || '') + '">' + avatar(sp.username, sp.nama, 'lg') + '<div class="grow"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(sp.username) + '">' + esc(sp.nama) + '</button>' + verMark('1') + '</b>';
     x += '<small>' + esc(sp.bidang) + ' &bull; ' + nf(sp.answers) + ' ' + tr('jawaban', 'answers') + ' &bull; ' + nf(sp.done) + ' ' + tr('konsultasi', 'sessions') + '</small>';
     if (sp.n) x += '<small class="rx-rate">&#9733; ' + nf1(sp.avg) + ' (' + nf(sp.n) + ' ' + tr('ulasan', 'reviews') + ')</small>';
     x += '<small>' + tr('Pakar Bulan Ini', 'Expert of the Month') + ' &bull; ' + esc(res.month) + '</small>';
@@ -809,18 +813,18 @@ function loadRight() {
       var h = '';
       for (var i = 0; i < res.rows.length; i++) {
         var e = res.rows[i];
-        h += '<div class="item rx" data-user="' + esc(e[0]) + '" data-nama="' + esc(e[1]) + '">' + avatar(e[0], e[1], 'lg') + '<div class="grow"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(e[0]) + '">' + esc(e[1]) + '</button>' + verMark('1') + '</b><small>' + esc(e[2]) + '</small><small class="rx-rate">' + (Number(e[7]) ? '&#9733; ' + nf1(e[6]) + ' (' + nf(e[7]) + ' ' + tr('ulasan', 'reviews') + ')' : tr('Belum ada ulasan', 'No reviews yet')) + '</small><button class="btn ghost sm" data-action="book">+ Booking</button></div></div>';
+        h += '<div class="item rx" data-user="' + esc(e[0]) + '" data-nama="' + esc(e[1]) + '" data-tarif="' + esc(e[10]) + '">' + avatar(e[0], e[1], 'lg') + '<div class="grow"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(e[0]) + '">' + esc(e[1]) + '</button>' + verMark('1') + '</b><small>' + esc(e[2]) + ' &bull; ' + nf(e[10]) + ' ' + tr('poin/sesi', 'pts/session') + '</small><small class="rx-rate">' + (Number(e[7]) ? '&#9733; ' + nf1(e[6]) + ' (' + nf(e[7]) + ' ' + tr('ulasan', 'reviews') + ')' : tr('Belum ada ulasan', 'No reviews yet')) + '</small><button class="btn ghost sm" data-action="book">+ Booking</button></div></div>';
       }
       fill(h);
     }, fail);
   } else if (r === 'Expert') {
-    o.f = 'Terbuka'; o.status = 'Terbuka';
+    o.f = 'Bounty'; o.status = 'Bounty';
     api('apiQuestions', [S.token, o], function (res) {
       if (!res.ok) { fill(''); return; }
       var h = '';
       for (var i = 0; i < res.rows.length; i++) {
         var q = res.rows[i];
-        h += '<div class="rx rx-q" data-action="nav" data-view="ask" tabindex="0"><div class="grow"><span class="tagc">' + esc(q[3]) + '</span><p>' + esc(shortTxt(q[4], 90)) + '</p><small>' + esc(q[7]) + ' &bull; ' + esc(fmtDate(q[1])) + '</small></div></div>';
+        h += '<div class="rx rx-q" data-action="nav" data-view="ask" tabindex="0"><div class="grow"><span class="tagc">' + esc(q[3]) + '</span>' + bountyChip(q) + '<p>' + esc(shortTxt(q[4], 90)) + '</p><small>' + esc(q[7]) + ' &bull; ' + esc(fmtDate(q[1])) + '</small></div></div>';
       }
       fill(h);
     }, fail);
@@ -895,26 +899,25 @@ function globalSearch(q) {
   if (!q) return;
   S.pendingQ = q;
   var r = role();
-  go(r === 'Admin' ? 'contracts' : (r === 'Expert' ? 'ask' : 'experts'));
+  go(r === 'Admin' ? 'bookings' : (r === 'Expert' ? 'ask' : 'experts'));
 }
 // Notifikasi dibangun dari data nyata (statistik server), bukan data dummy
 function buildNotif(st, hub) {
   var r = role(), items = [];
   if (r === 'Client') {
     if (hub.pending) items.push([nf(hub.pending) + ' ' + tr('booking menunggu konfirmasi pakar', 'bookings awaiting expert confirmation'), 'bookings']);
+    if (hub.toPick) items.push([nf(hub.toPick) + ' ' + tr('pertanyaan sudah dijawab. Pilih jawaban terbaik.', 'of your questions have answers. Pick the best one.'), 'ask']);
     if (hub.open) items.push([nf(hub.open) + ' ' + tr('pertanyaan Anda belum terjawab', 'of your questions are unanswered'), 'ask']);
-    if (st && st.contracts.pending) items.push([nf(st.contracts.pending) + ' ' + tr('kontrak menunggu verifikasi', 'contracts pending review'), 'contracts']);
-    if (st && st.copyrights.open) items.push([nf(st.copyrights.open) + ' ' + tr('kasus hak cipta masih berjalan', 'copyright cases in progress'), 'copyrights']);
     if (hub.toReview) items.push([nf(hub.toReview) + ' ' + tr('konsultasi selesai menunggu ulasan Anda', 'completed consultations awaiting your review'), 'bookings']);
-    if (S.credit && S.credit.quota <= 0 && S.credit.poin < S.cfg.cost.contract) items.push([tr('Kredit Anda hampir habis. Lakukan top-up.', 'Your credit is running low. Top up now.'), 'home']);
+    if (S.credit && S.credit.poin < 50) items.push([tr('Poin Anda hampir habis. Lakukan top-up.', 'You are running low on points. Top up now.'), 'wallet']);
   } else if (r === 'Expert') {
     if (!isVerifiedExpert()) items.push([tr('Pendaftaran Anda sedang dalam proses screening admin', 'Your application is being screened by the admin'), 'screening']);
     if (hub.incoming) items.push([nf(hub.incoming) + ' ' + tr('permintaan konsultasi baru', 'new consultation requests'), 'bookings']);
     if (hub.unreplied) items.push([nf(hub.unreplied) + ' ' + tr('ulasan belum Anda balas', 'reviews awaiting your reply'), 'myreviews']);
+    if (hub.bountyNew) items.push([nf(hub.bountyNew) + ' ' + tr('bounty baru di bidang Anda (Pro)', 'new bounties in your field (Pro)'), 'ask']);
   } else {
     if (hub.pendingVerif) items.push([nf(hub.pendingVerif) + ' ' + tr('pendaftar pakar menunggu screening', 'expert applicants awaiting screening'), 'verify']);
-    if (st && st.contracts.pending) items.push([nf(st.contracts.pending) + ' ' + tr('kontrak menunggu verifikasi', 'contracts pending review'), 'contracts']);
-    if (st && st.copyrights.open) items.push([nf(st.copyrights.open) + ' ' + tr('kasus hak cipta aktif', 'active copyright cases'), 'copyrights']);
+    if (hub.cashPending) items.push([nf(hub.cashPending) + ' ' + tr('pengajuan pencairan menunggu diproses', 'payout requests waiting'), 'cashouts']);
     if (hub.pending) items.push([nf(hub.pending) + ' ' + tr('booking menunggu', 'bookings pending'), 'bookings']);
     if (hub.reviewsFlag) items.push([nf(hub.reviewsFlag) + ' ' + tr('ulasan bintang rendah perlu ditinjau', 'low-star reviews need review'), 'reviews']);
   }
@@ -934,64 +937,93 @@ function markNotifRead() {
   if (b) { ssSet('lh_notif_read', b.textContent); b.hidden = true; }
 }
 
-/* ============ Kredit & top-up ============ */
-function renderCreditWidget() {
-  if (S.credit) paintCredit();
+/* ============ Dompet poin, top-up & paket Pro ============ */
+function poinRp(p) { return rp((Number(p) || 0) * (S.cfg.poin ? S.cfg.poin.rp : 100)); }
+function setWallet(w) { if (!w) return; S.credit = w; paintCredit(); }
+function applyCreditInfo() { renderCreditWidget(true); } // fitur lama (kontrak) disembunyikan; cukup segarkan saldo
+function renderCreditWidget(force) {
+  if (S.credit && !force) paintCredit();
   if (S.creditBusy) return;
   S.creditBusy = true;
   api('apiGetCredit', [S.token], function (res) {
     S.creditBusy = false;
     if (!res.ok) return;
-    S.credit = { poin: res.poin, quota: res.quota, plan: res.plan };
-    paintCredit();
+    setWallet(res);
   }, function () { S.creditBusy = false; });
 }
 function paintCredit() {
   paintLeftStats();
-  var w = el('credit-widget-box');
-  if (!w || !S.credit) return;
   var c = S.credit;
-  w.innerHTML = '<div class="credit-widget">' +
-    '<div class="credit-box">' +
-      '<div class="credit-item"><small>' + tr('Saldo Poin', 'Points') + '</small><b>' + ic('bolt') + nf(c.poin) + ' Pts</b></div>' +
-      '<div class="credit-item q"><small>' + tr('Kuota Bulanan', 'Monthly quota') + '</small><b>' + ic('refresh') + nf(c.quota) + 'x ' + tr('aksi', 'actions') + '</b></div>' +
-      '<div class="credit-item p"><small>' + tr('Paket', 'Plan') + '</small><b>' + ic('star') + esc(c.plan) + '</b></div>' +
-    '</div>' +
-    '<button class="btn sm" data-action="topup">+ ' + tr('Top-Up / Langganan', 'Top up / Subscribe') + '</button>' +
-  '</div>';
+  if (!c) return;
+  if (el('bk-svc')) updateBookSum();
+  if (el('co-sum')) updateCashSum();
+  var sb = el('q-sorot-box');
+  if (sb) sb.innerHTML = c.pro && c.sorot > 0 ? '<label class="chk" style="margin:4px 0 10px"><input type="checkbox" id="q-sorot"><span class="box"></span><span>' + tr('Sorot di urutan teratas selama 24 jam', 'Feature at the top for 24 hours') + ' <span class="muted sm">(' + tr('sisa ', '') + nf(c.sorot) + 'x' + tr('', ' left') + ')</span></span></label>' : '';
+  var w = el('credit-widget-box');
+  if (!w) return;
+  var r = role();
+  var third = r === 'Expert'
+    ? '<div class="credit-item p"><small>' + tr('Biaya layanan', 'Service fee') + '</small><b>' + ic('wallet') + Math.round((c.fee || 0) * 100) + '%</b></div>'
+    : '<div class="credit-item q"><small>' + tr('Sorot bounty', 'Bounty boosts') + '</small><b>' + ic('bolt') + (c.pro ? nf(c.sorot) + 'x' : '-') + '</b></div>';
+  var btns = r === 'Expert'
+    ? '<button class="btn sm" data-action="nav" data-view="wallet">' + tr('Cairkan poin', 'Cash out') + '</button>'
+    : '<button class="btn sm" data-action="topup">+ ' + tr('Top-up poin', 'Top up') + '</button>';
+  if (!c.pro) btns += '<button class="btn ghost sm" data-action="pro-open">' + tr('Jadi Pro', 'Go Pro') + '</button>';
+  w.innerHTML = '<div class="credit-widget"><div class="credit-box">' +
+    '<div class="credit-item"><small>' + tr('Saldo poin', 'Points') + '</small><b>' + ic('coin') + nf(c.poin) + ' <span class="muted sm">' + poinRp(c.poin) + '</span></b></div>' +
+    '<div class="credit-item p"><small>' + tr('Paket', 'Plan') + '</small><b>' + (c.pro ? '<span class="pro-b">PRO</span> <span class="muted sm">' + tr('s.d. ', 'until ') + esc(fmtDate(c.proUntil)) + '</span>' : ic('star') + tr('Gratis', 'Free')) + '</b></div>' + third +
+    '</div><div class="cw-btns">' + btns + '</div></div>';
 }
-function applyCreditInfo(ci) {
-  if (!ci) return;
-  S.credit = { poin: ci.remainingPoin, quota: ci.remainingQuota, plan: ci.plan };
-  paintCredit();
+function proCardHtml() {
+  var c = S.credit || {}, pr = S.cfg.pro || { price: 100000, bonus: 1200, sorot: 3 }, r = role();
+  var items = r === 'Expert'
+    ? [tr('Biaya layanan pencairan 20% (biasanya 30%)', 'Payout service fee 20% (normally 30%)'), tr('Info bounty baru di bidang Anda', 'Alerts for new bounties in your field'), tr('Slot "Pakar Unggulan" berlabel di direktori', 'A labelled "Featured expert" slot in the directory'), tr('Statistik profil: berapa kali dilihat', 'Profile stats: how many times you were viewed')]
+    : [nf(pr.bonus) + tr(' poin setiap bulan (bonus 200 poin)', ' points every month (200 bonus points)'), tr('Sorot bounty ', 'Boost a bounty ') + nf(pr.sorot) + tr('x sebulan, tampil teratas 24 jam', 'x a month, shown on top for 24 hours'), tr('Lencana Pro di profil', 'Pro badge on your profile')];
+  var li = '';
+  for (var i = 0; i < items.length; i++) li += '<li>' + ic('check') + '<span>' + esc(items[i]) + '</span></li>';
+  return '<div class="card pro-card"><div class="pro-top"><div><span class="pro-b">PRO</span><h3>' + (r === 'Expert' ? tr('Pro untuk pakar', 'Pro for experts') : tr('Pro untuk client', 'Pro for clients')) + '</h3></div><div class="pro-price">' + rp(pr.price) + '<small>' + tr('/bulan', '/month') + '</small></div></div><ul class="pro-list">' + li + '</ul>' +
+    (c.pro ? '<p class="muted sm" style="margin-bottom:10px">' + tr('Aktif sampai ', 'Active until ') + esc(fmtDate(c.proUntil)) + '</p>' : '') +
+    '<button class="btn block" data-action="do-topup" data-type="pro">' + (c.pro ? tr('Perpanjang 30 hari', 'Extend 30 days') : tr('Langganan Pro', 'Subscribe to Pro')) + '</button></div>';
 }
-function openTopUp() {
-  var t = S.cfg.topup;
-  var h = '<h3>' + tr('Top-Up & Langganan', 'Top up & Subscribe') + '</h3><p class="muted sm">' + tr('Pilih paket untuk menambah kredit Anda.', 'Choose a package to add credit.') + '</p>';
-  h += '<div class="plans">';
-  h += '<button class="plan" data-action="do-topup" data-type="poin"><div><b>' + esc(t.poin.label) + '</b><span>' + tr('Poin dipakai saat kuota bulanan habis', 'Points are used once the monthly quota runs out') + '</span></div><strong>' + rp(t.poin.price) + '</strong></button>';
-  h += '<button class="plan" data-action="do-topup" data-type="subs"><div><b>' + esc(t.subs.label) + '</b><span>' + tr('Kuota bulanan menjadi ', 'Monthly quota becomes ') + nf(t.subs.quota) + 'x ' + tr('aksi', 'actions') + '</span></div><strong>' + rp(t.subs.price) + tr('/bln', '/mo') + '</strong></button>';
-  h += '</div><p class="muted sm" style="margin-bottom:14px">' + tr('Pembayaran disimulasikan pada versi prototipe ini.', 'Payment is simulated in this prototype.') + '</p>';
+function pkgGridHtml() {
+  var t = S.cfg.topup, keys = ['p50', 'p100', 'p200', 'p500', 'p1000'], h = '<div class="pkg-grid">';
+  for (var i = 0; i < keys.length; i++) {
+    var k = t[keys[i]];
+    if (!k) continue;
+    h += '<button class="pkg" data-action="do-topup" data-type="' + keys[i] + '"><b>' + nf(k.poin) + '</b><span>' + tr('poin', 'points') + '</span><strong>' + rp(k.price) + '</strong></button>';
+  }
+  return h + '</div>';
+}
+function openTopUp(mode) {
+  var r = role();
+  var h = '<h3>' + (r === 'Expert' || mode === 'pro' ? tr('Paket Pro', 'Pro plan') : tr('Top-up poin', 'Top up points')) + '</h3>';
+  if (r === 'Client' && mode !== 'pro') {
+    h += '<p class="muted sm">' + tr('1 poin = Rp100. Poin dipakai untuk bounty pertanyaan dan booking konsultasi.', '1 point = Rp100. Use points for question bounties and bookings.') + '</p>' + pkgGridHtml();
+  }
+  h += proCardHtml();
+  h += '<p class="muted sm" style="margin:12px 0">' + tr('Pembayaran (QRIS / virtual account) disimulasikan pada versi prototipe ini.', 'Payment (QRIS / virtual account) is simulated in this prototype.') + '</p>';
   h += '<button class="btn ghost block" data-action="close-x">' + tr('Tutup', 'Close') + '</button>';
   openModal(h);
 }
 function doTopUp(btn) {
   var type = String(btn.getAttribute('data-type'));
+  var pkg = S.cfg.topup[type];
   busyEl(btn, true);
   api('apiTopUp', [S.token, type], function (res) {
     busyEl(btn, false);
     if (!res.ok) { toast(res.msg, 'err'); return; }
-    S.credit = { poin: res.poin, quota: res.quota, plan: res.plan };
-    paintCredit();
+    setWallet(res);
     closeModal();
-    toast(type === 'poin' ? tr('Top-up poin berhasil!', 'Points topped up!') : tr('Langganan Pro Monthly aktif!', 'Pro Monthly is now active!'), 'ok');
+    resetStats();
+    if (S.view === 'wallet') { VIEWS.wallet(); }
+    toast(type === 'pro' ? tr('Paket Pro aktif sampai ', 'Pro is active until ') + fmtDate(res.proUntil) : tr('Top-up berhasil: +', 'Topped up: +') + nf(pkg ? pkg.poin : 0) + ' ' + tr('poin', 'points'), 'ok');
   }, function (m) { busyEl(btn, false); toast(m, 'err'); });
 }
 function costHint() {
   var c = S.cfg.cost;
   return '<p class="cost">' + tr('Biaya: 1 kuota bulanan, atau ', 'Cost: 1 monthly quota, or ') + nf(c.contract) + tr(' poin bila kuota habis.', ' points once the quota runs out.') + '</p>';
 }
-// Bila server menolak karena kredit habis, langsung tawarkan top-up
+// Bila server menolak karena poin kurang, langsung tawarkan top-up
 function maybeTopUp(msg) { if (/Top-Up/i.test(String(msg))) setTimeout(openTopUp, 400); }
 
 /* ============ List engine: server-side pagination + infinite scroll + filter backend ============ */
@@ -1002,7 +1034,9 @@ var LC = {
   recap: { fn: 'apiRecap', tag: 'tbody', render: function (r) { return legacyRow('recap', r, false); }, key: function (r) { return r[0]; } },
   feed: { fn: 'apiFeed', tag: 'div', render: function (r, p) { return postHtml(r, p); }, key: function (r) { return r[0] + '|' + r[1]; } },
   ask: { fn: 'apiQuestions', tag: 'div', render: function (r, p) { return questionHtml(r, p); }, key: function (r) { return r[0] + '|' + r[1]; } },
-  experts: { fn: 'apiExperts', tag: 'div', render: function (r) { return expertHtml(r); }, key: function (r) { return r[0]; } },
+  experts: { fn: 'apiExperts', tag: 'div', render: function (r) { return expertHtml(r); }, key: function (r) { return r[0]; }, onRes: function (res, first) { if (first) renderFeatured(res.featured || []); } },
+  ledger: { fn: 'apiLedger', tag: 'tbody', render: function (r) { return ledgerRow(r); }, key: function (r) { return r[0] + '|' + r[1]; } },
+  cashouts: { fn: 'apiCashouts', tag: 'tbody', render: function (r) { return cashoutRow(r); }, key: function (r) { return r[0] + '|' + r[1]; } },
   bookings: { fn: 'apiBookings', tag: 'tbody', render: function (r, p) { return bookingRow(r, p); }, key: function (r) { return r[0] + '|' + r[1]; } },
   earnings: { fn: 'apiEarnings', tag: 'tbody', render: function (r) { return earningRow(r); }, key: function (r) { return r[0] + '|' + r[1]; } },
   reviews: { fn: 'apiReviews', tag: 'div', args: function (o) { o.expert = String(S.exp || ''); return [S.token, o]; }, render: function (r, p) { return reviewHtml(r, p); }, key: function (r) { return r[0] + '|' + r[1]; } },
@@ -1065,6 +1099,7 @@ function loadMore(key, reset) {
     if (rid !== st.rid || !el('box-' + key)) return;
     st.loading = false;
     if (!res.ok) { refreshMeta(key); toast(res.msg || tr('Gagal memuat data.', 'Failed to load data.'), 'err'); return; }
+    if (cfg.onRes) cfg.onRes(res, o.offset === 0);
     var html = '';
     for (var i = 0; i < res.rows.length; i++) {
       var k = cfg.key(res.rows[i]);
@@ -1094,10 +1129,10 @@ function prependRow(key, html) {
 /* ============ Renderer: alat legal (kontrak, hak cipta, pajak, rekap kreator) ============ */
 function legacyHeads(key) {
   var a = isAdmin();
-  if (key === 'contracts') return ['ID', tr('Tanggal', 'Date')].concat(a ? [tr('Kreator', 'Creator')] : [], ['Brand', tr('Nilai Kontrak', 'Contract value'), 'Status']);
-  if (key === 'copyrights') return ['ID', tr('Tanggal', 'Date')].concat(a ? [tr('Kreator', 'Creator')] : [], [tr('Link Pelanggar', 'Infringing link'), tr('Deskripsi', 'Description'), 'Status']);
+  if (key === 'contracts') return ['ID', tr('Tanggal', 'Date')].concat(a ? ['Client'] : [], ['Brand', tr('Nilai Kontrak', 'Contract value'), 'Status']);
+  if (key === 'copyrights') return ['ID', tr('Tanggal', 'Date')].concat(a ? ['Client'] : [], [tr('Link Pelanggar', 'Infringing link'), tr('Deskripsi', 'Description'), 'Status']);
   if (key === 'taxes') return ['ID', tr('Tanggal', 'Date'), tr('Sumber', 'Source'), tr('Jumlah', 'Amount'), tr('Estimasi Pajak', 'Est. tax')];
-  return [tr('Kreator', 'Creator'), tr('Kontrak', 'Contracts'), tr('Nilai Terverifikasi', 'Verified value'), tr('Kasus HC', 'Copyright cases'), tr('Belum Selesai', 'Open'), tr('Pendapatan', 'Revenue'), tr('Est. Pajak', 'Est. tax')];
+  return ['Client', tr('Kontrak', 'Contracts'), tr('Nilai Terverifikasi', 'Verified value'), tr('Kasus HC', 'Copyright cases'), tr('Belum Selesai', 'Open'), tr('Pendapatan', 'Revenue'), tr('Est. Pajak', 'Est. tax')];
 }
 function statusSelect(key, cur) {
   return '<select class="status-sel ' + toneOf(cur) + '" data-action="status" data-prev="' + esc(cur) + '" aria-label="Status">' + opts(STATUS[key], cur, true) + '</select>';
@@ -1136,19 +1171,44 @@ function postHtml(r, pending) {
   h += '<button class="act" data-action="share-post" aria-label="' + tr('Bagikan', 'Share') + '">' + ic('share') + '<span>' + tr('Bagikan', 'Share') + '</span></button></div></article>';
   return h;
 }
+// Sisa waktu bounty dari 'yyyy-MM-dd HH:mm:ss' (WIB)
+function leftTxt(batas) {
+  if (!batas) return '';
+  var t = new Date(String(batas).replace(' ', 'T') + '+07:00').getTime() - Date.now();
+  if (!(t > 0)) return '';
+  var d = Math.floor(t / 86400000), h = Math.floor((t % 86400000) / 3600000);
+  return d ? tr('sisa ', '') + d + tr(' hari', ' days left') : tr('sisa ', '') + Math.max(1, h) + tr(' jam', ' hours left');
+}
+function bountyChip(r) {
+  var b = Number(r[8]) || 0;
+  if (!b) return '';
+  return '<span class="bty' + (r[5] === 'Selesai' ? ' won' : '') + '">' + ic('coin') + nf(b) + ' ' + tr('poin', 'pts') + ' <small>' + poinRp(b) + '</small></span>';
+}
 function questionHtml(r, pending) {
-  // r: [id, tgl, client, kategori, teks, status, jumlahJawaban, namaClient]
-  var h = '<article class="item' + (pending ? ' is-pending' : '') + '" data-id="' + esc(r[0]) + '" data-tgl="' + esc(r[1]) + '">';
+  // r: [0 id, 1 tgl, 2 client, 3 kategori, 4 teks, 5 status, 6 jumlahJawaban, 7 namaClient, 8 bounty, 9 batas, 10 terpilih, 11 pemenang, 12 disorot, 13 namaPemenang]
+  var open = r[5] === 'Terbuka' || r[5] === 'Terjawab', b = Number(r[8]) || 0;
+  var h = '<article class="item q' + (pending ? ' is-pending' : '') + (r[12] === '1' && open ? ' sorot-on' : '') + '" data-id="' + esc(r[0]) + '" data-tgl="' + esc(r[1]) + '" data-b="' + b + '">';
   h += '<div class="ihead">' + avatar(r[2], r[7], 'lg') + '<div class="meta"><b>' + esc(r[7]) + '</b><small>' + esc(fmtDate(r[1])) + '</small></div><span class="st">' + badge(r[5]) + '</span></div>';
-  h += '<span class="tagc">' + esc(r[3]) + '</span><p class="itext">' + escBr(r[4]) + '</p>';
+  h += '<div class="q-chips"><span class="tagc">' + esc(r[3]) + '</span>' + bountyChip(r);
+  if (r[12] === '1' && open) h += '<span class="sorot">' + ic('bolt') + tr('Disorot', 'Featured') + '</span>';
+  if (open && b && leftTxt(r[9])) h += '<span class="muted sm">' + esc(leftTxt(r[9])) + '</span>';
+  if (open && !b) h += '<span class="muted sm">' + tr('tanpa bounty', 'no bounty') + '</span>';
+  h += '</div><p class="itext">' + escBr(r[4]) + '</p>';
+  if (r[5] === 'Selesai' && r[13]) h += '<p class="won-line">' + ic('trophy') + tr('Jawaban terbaik: ', 'Best answer: ') + '<b>' + esc(r[13]) + '</b>' + (b ? ' &bull; +' + nf(b) + ' ' + tr('poin', 'pts') : '') + '</p>';
+  if (r[5] === 'Dikembalikan') h += '<p class="muted sm" style="margin-bottom:6px">' + tr('Tidak ada jawaban dalam 7 hari. Poin sudah dikembalikan ke penanya.', 'No answer within 7 days. The points went back to the asker.') + '</p>';
   h += '<div class="ifoot act-row"><button class="act" data-action="toggle-ans">' + ic('ask') + '<span>' + tr('Jawaban', 'Answers') + ' (<span class="ac">' + nf(r[6]) + '</span>)</span></button>';
-  if (isVerifiedExpert() && !pending) h += '<button class="act" data-action="open-reply">' + ic('pen') + '<span>' + tr('Jawab', 'Answer') + '</span></button>';
+  if (isVerifiedExpert() && !pending && open) h += '<button class="act" data-action="open-reply">' + ic('pen') + '<span>' + tr('Jawab', 'Answer') + (b ? ' &bull; ' + nf(b) + ' ' + tr('poin', 'pts') : '') + '</span></button>';
   h += '</div><div class="ans" hidden></div></article>';
   return h;
 }
-function answerHtml(a, pending) {
-  // a: [id, tgl, expert, jawaban, nama, bidang, bintangDariPenanya, bisaDinilai]
-  var h = '<div class="a-item' + (pending ? ' is-pending' : '') + '" data-id="' + esc(a[0]) + '" data-tgl="' + esc(a[1]) + '" data-xn="' + esc(a[4]) + '"><div class="ihead">' + avatar(a[2], a[4], '') + '<div class="meta"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(a[2]) + '">' + esc(a[4]) + '</button>' + verMark('1') + '</b><small>' + esc(a[5]) + ' &bull; ' + esc(fmtDate(a[1])) + '</small></div></div><p class="itext">' + escBr(a[3]) + '</p>';
+function answerHtml(a, pending, q) {
+  // a: [0 id, 1 tgl, 2 expert, 3 jawaban, 4 nama, 5 bidang, 6 bintangDariPenanya, 7 bisaDinilai, 8 terpilih]
+  var best = a[8] === '1';
+  var h = '<div class="a-item' + (pending ? ' is-pending' : '') + (best ? ' best-on' : '') + '" data-id="' + esc(a[0]) + '" data-tgl="' + esc(a[1]) + '" data-xn="' + esc(a[4]) + '" data-user="' + esc(a[2]) + '" data-nama="' + esc(a[4]) + '"><div class="ihead">' + avatar(a[2], a[4], '') + '<div class="meta"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(a[2]) + '">' + esc(a[4]) + '</button>' + verMark('1') + '</b><small>' + esc(a[5]) + ' &bull; ' + esc(fmtDate(a[1])) + '</small></div>' + (best ? '<span class="best">' + ic('trophy') + tr('Jawaban terbaik', 'Best answer') + '</span>' : '') + '</div><p class="itext">' + escBr(a[3]) + '</p>';
+  var acts = '';
+  if (q && q.mine && q.open && !pending) acts += '<button class="btn sm" data-action="pick-answer">' + ic('check') + tr('Pilih jawaban ini', 'Choose this answer') + (q.bounty ? ' &bull; ' + nf(q.bounty) + ' ' + tr('poin', 'pts') : '') + '</button>';
+  if (best && role() === 'Client') acts += '<button class="btn ghost sm" data-action="book">' + tr('Booking pakar ini', 'Book this expert') + '</button>';
+  if (acts) h += '<div class="a-acts">' + acts + '</div>';
   h += '<div class="a-rate">' + answerRateHtml(a[6], a[7]) + '</div>';
   return h + '</div>';
 }
@@ -1160,15 +1220,29 @@ function answerRateHtml(st, can) {
 function expertHtml(r) {
   // r: [username, nama, bidang, bio, jawaban, konsultasi]
   // r: [..., 6 rata-rata, 7 jumlah ulasan, 8 teladan, 9 % puas]
-  var h = '<article class="item exp" data-user="' + esc(r[0]) + '" data-nama="' + esc(r[1]) + '">' + avatar(r[0], r[1], 'lg') + '<div class="grow">';
-  h += '<b style="display:flex;align-items:center;gap:6px"><button class="nm-link" data-action="expert-open" data-user="' + esc(r[0]) + '">' + esc(r[1]) + '</button>' + verMark('1') + '</b><span class="tagc" style="margin-top:6px">' + esc(r[2]) + '</span>';
+  // r: [..., 10 tarif poin, 11 pro]
+  var h = '<article class="item exp" data-user="' + esc(r[0]) + '" data-nama="' + esc(r[1]) + '" data-tarif="' + esc(r[10]) + '">' + avatar(r[0], r[1], 'lg') + '<div class="grow">';
+  h += '<b style="display:flex;align-items:center;gap:6px"><button class="nm-link" data-action="expert-open" data-user="' + esc(r[0]) + '">' + esc(r[1]) + '</button>' + verMark('1') + (r[11] === '1' ? '<span class="pro-b">PRO</span>' : '') + '</b><span class="tagc" style="margin-top:6px">' + esc(r[2]) + '</span>';
   h += '<div class="rate-line">' + rateChip(r[6], r[7], r[8]) + (Number(r[7]) ? '<span class="muted sm">' + nf(r[9]) + '% ' + tr('puas', 'satisfied') + '</span>' : '') + '</div>';
   h += '<p>' + esc(r[3] || tr('Pakar hukum terverifikasi.', 'Verified legal expert.')) + '</p>';
-  h += '<div class="ifoot" style="margin-top:0"><span class="badge b-info">' + nf(r[4]) + ' ' + tr('jawaban', 'answers') + '</span><span class="badge b-ok">' + nf(r[5]) + ' ' + tr('konsultasi', 'consultations') + '</span>';
+  h += '<div class="ifoot" style="margin-top:0"><span class="badge b-tarif">' + ic('coin') + nf(r[10]) + ' ' + tr('poin/sesi', 'pts/session') + '</span><span class="badge b-info">' + nf(r[4]) + ' ' + tr('jawaban', 'answers') + '</span><span class="badge b-ok">' + nf(r[5]) + ' ' + tr('konsultasi', 'consultations') + '</span>';
   h += '<button class="btn ghost sm" data-action="expert-open" data-user="' + esc(r[0]) + '" style="margin-left:auto">' + tr('Lihat ulasan', 'See reviews') + '</button>';
   if (role() === 'Client') h += '<button class="btn sm" data-action="book">Booking</button>';
   h += '</div></div></article>';
   return h;
+}
+// Slot "Pakar Unggulan" (khusus pakar Pro, berlabel, tidak mengubah urutan rating di bawahnya)
+function renderFeatured(list) {
+  var box = el('feat-box');
+  if (!box) return;
+  if (!list.length) { box.innerHTML = ''; return; }
+  var h = '<div class="card feat"><div class="feat-h"><b>' + tr('Pakar Unggulan', 'Featured experts') + '</b><span class="muted sm">' + tr('Slot berbayar untuk pakar Pro. Urutan rating di bawah tidak terpengaruh.', 'A paid slot for Pro experts. The rating order below is not affected.') + '</span></div><div class="feat-row">';
+  for (var i = 0; i < list.length; i++) {
+    var e = list[i];
+    h += '<div class="item feat-i" data-user="' + esc(e[0]) + '" data-nama="' + esc(e[1]) + '" data-tarif="' + esc(e[10]) + '">' + avatar(e[0], e[1], 'lg') + '<div class="grow"><b><button class="nm-link" data-action="expert-open" data-user="' + esc(e[0]) + '">' + esc(e[1]) + '</button><span class="pro-b">PRO</span></b><small>' + esc(e[2]) + '</small><small class="rx-rate">' + (Number(e[7]) ? '&#9733; ' + nf1(e[6]) + ' (' + nf(e[7]) + ')' : tr('Belum ada ulasan', 'No reviews yet')) + ' &bull; ' + nf(e[10]) + ' ' + tr('poin/sesi', 'pts/session') + '</small>' + (role() === 'Client' ? '<button class="btn sm" data-action="book">Booking</button>' : '') + '</div></div>';
+  }
+  box.innerHTML = h + '</div></div>';
+  ensurePhotos(box);
 }
 function bookingSelect(cur) {
   var list;
@@ -1191,8 +1265,9 @@ function bookingRow(r, pending) {
   var who = role() === 'Client' ? r[9] : (role() === 'Expert' ? r[8] : r[8] + ' / ' + r[9]);
   var h = '<tr class="' + (pending ? 'is-pending' : '') + '" data-id="' + esc(r[0]) + '" data-tgl="' + esc(r[1]) + '" data-xn="' + esc(r[9] || '') + '">';
   h += '<td class="mono">' + esc(r[0]) + '</td><td class="num">' + esc(fmtDate(r[1])) + '</td><td>' + esc(who) + '</td><td>' + esc(r[4]) + '</td>';
-  h += '<td class="num">' + rp(r[5]) + '</td>';
-  if (role() !== 'Client') h += '<td class="num">' + rp(r[6]) + '</td>';
+  var pt = Number(r[12]) || 0; // booking berbayar poin; 0 = data lama dalam rupiah
+  h += '<td class="num">' + (pt ? nf(pt) + ' ' + tr('poin', 'pts') : rp(r[5])) + '</td>';
+  if (role() !== 'Client') h += '<td class="num">' + (pt ? '<span class="muted">' + tr('saat pencairan', 'at payout') + '</span>' : rp(r[6])) + '</td>';
   h += '<td>' + (role() !== 'Client' && !pending ? bookingSelect(r[7]) : badge(r[7])) + '</td>';
   h += '<td class="rv-cell">' + bookingRateCell(r[10], r[11]) + '</td></tr>';
   return h;
@@ -1201,6 +1276,32 @@ function bookingRateCell(st, can) {
   if (st) return stars(st, 'sm');
   if (can === '1') return '<button class="btn ghost sm" data-action="rate-booking">' + tr('Beri ulasan', 'Write review') + '</button>';
   return '<span class="muted">-</span>';
+}
+var JENIS = {
+  TOPUP: ['Top-up', 'Top-up'], BONUS_PRO: ['Bonus Pro', 'Pro bonus'], PRO: ['Langganan Pro', 'Pro subscription'],
+  BOUNTY_TAHAN: ['Bounty ditahan', 'Bounty held'], BOUNTY_KEMBALI: ['Bounty kembali', 'Bounty refunded'], BOUNTY_MENANG: ['Menang bounty', 'Bounty won'],
+  BOOKING_TAHAN: ['Booking ditahan', 'Booking held'], BOOKING_KEMBALI: ['Booking kembali', 'Booking refunded'], BOOKING_MASUK: ['Pendapatan konsultasi', 'Consultation income'],
+  PENCAIRAN: ['Pencairan', 'Payout'], PENCAIRAN_BATAL: ['Pencairan batal', 'Payout cancelled']
+};
+function ledgerRow(r) {
+  // r: [id, tgl, jenis, poin, saldo, referensi, keterangan]
+  var n = Number(r[3]) || 0, j = JENIS[r[2]] || [r[2], r[2]];
+  return '<tr><td class="num">' + esc(fmtDate(r[1])) + '</td><td class="strong">' + esc(tr(j[0], j[1])) + '</td><td class="num ' + (n > 0 ? 'plus' : (n < 0 ? 'minus' : '')) + '">' + (n > 0 ? '+' : '') + nf(n) + '</td><td class="num">' + nf(r[4]) + '</td><td class="desc">' + esc(r[6]) + '</td></tr>';
+}
+function cashoutHeads() {
+  return isAdmin() ? [tr('Tanggal', 'Date'), tr('Pakar', 'Expert'), tr('Poin', 'Points'), tr('Biaya', 'Fee'), tr('Ditransfer', 'To transfer'), tr('Rekening', 'Account'), 'Status']
+    : [tr('Tanggal', 'Date'), tr('Poin', 'Points'), tr('Biaya', 'Fee'), tr('Diterima', 'You receive'), tr('Rekening', 'Account'), 'Status'];
+}
+function cashoutRow(r) {
+  // r: [0 id, 1 tgl, 2 pakar, 3 poin, 4 biaya %, 5 biaya Rp, 6 diterima Rp, 7 bank, 8 norek, 9 atas nama, 10 status, 11 diproses oleh, 12 tgl proses]
+  var a = isAdmin();
+  var h = '<tr data-id="' + esc(r[0]) + '" data-tgl="' + esc(r[1]) + '"><td class="num">' + esc(fmtDate(r[1])) + '</td>';
+  if (a) h += '<td class="strong">' + esc(r[2]) + '</td>';
+  h += '<td class="num">' + nf(r[3]) + '</td><td class="num">' + nf(r[4]) + '% <span class="muted">(' + rp(r[5]) + ')</span></td><td class="num strong">' + rp(r[6]) + '</td>';
+  h += '<td>' + esc(r[7]) + ' &bull; ' + esc(r[8]) + '<br><span class="muted sm">' + esc(r[9]) + '</span></td><td>';
+  if (a && r[10] === 'Menunggu') h += '<div class="co-acts"><button class="btn sm" data-action="co-pay" data-v="Dibayar">' + tr('Tandai dibayar', 'Mark paid') + '</button><button class="btn ghost sm" data-action="co-pay" data-v="Ditolak">' + tr('Tolak', 'Reject') + '</button></div>';
+  else h += badge(r[10]);
+  return h + '</td></tr>';
 }
 function earningRow(r) {
   // r: [id, tgl, namaClient, layanan, harga, komisi, neto]
@@ -1232,7 +1333,7 @@ function composerHtml() {
     h += ve ? '<button class="cp-pill" data-action="compose">' + tr('Bagikan wawasan hukum...', 'Share a legal insight...') + '</button>'
       : '<button class="cp-pill" data-action="nav" data-view="screening">' + tr('Posting aktif setelah akun Anda disetujui admin', 'Posting unlocks once the admin approves you') + '</button>';
   } else {
-    h += '<button class="cp-pill" data-action="ask-go">' + tr('Ajukan pertanyaan hukum...', 'Ask a legal question...') + '</button>';
+    h += '<button class="cp-pill" data-action="ask-go">' + tr('Tanya pakar, pasang bounty poin...', 'Ask the experts, add a points bounty...') + '</button>';
   }
   h += '</div>';
   if (ve) {
@@ -1241,8 +1342,8 @@ function composerHtml() {
     h += '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn ghost sm" data-action="compose-x">' + tr('Batal', 'Cancel') + '</button><button class="btn sm" id="btn-post" data-action="post">' + tr('Posting', 'Post') + '</button></div></div>';
   }
   var acts = r === 'Expert'
-    ? [[ve ? 'compose' : 'nav', 'feed', 'feed', tr('Postingan', 'Post'), 'c1'], ['nav', 'ask', 'ask', tr('Jawab', 'Answer'), 'c2'], ['nav', 'bookings', 'calendar', 'Booking', 'c3'], ['nav', 'earnings', 'wallet', tr('Pendapatan', 'Earnings'), 'c4']]
-    : [['nav', 'ask', 'ask', tr('Tanya pakar', 'Ask'), 'c1'], ['nav', 'experts', 'experts', tr('Cari pakar', 'Experts'), 'c2'], ['nav', 'contracts', 'doc', tr('Kontrak', 'Contract'), 'c3'], ['nav', 'copyrights', 'copyright', tr('Hak cipta', 'Copyright'), 'c4']];
+    ? [[ve ? 'compose' : 'nav', 'feed', 'feed', tr('Postingan', 'Post'), 'c1'], ['nav', 'ask', 'trophy', tr('Jawab bounty', 'Answer bounties'), 'c2'], ['nav', 'bookings', 'calendar', 'Booking', 'c3'], ['nav', 'wallet', 'wallet', tr('Dompet', 'Wallet'), 'c4']]
+    : [['nav', 'ask', 'trophy', tr('Pasang bounty', 'Post a bounty'), 'c1'], ['nav', 'experts', 'experts', tr('Cari pakar', 'Experts'), 'c2'], ['nav', 'bookings', 'calendar', 'Booking', 'c3'], ['nav', 'wallet', 'wallet', tr('Dompet', 'Wallet'), 'c4']];
   h += '<div class="cp-acts">';
   for (var i = 0; i < acts.length; i++) h += '<button class="cp-act ' + acts[i][4] + '" data-action="' + acts[i][0] + '" data-view="' + acts[i][1] + '" title="' + esc(acts[i][3]) + '">' + ic(acts[i][2]) + '<span>' + esc(acts[i][3]) + '</span></button>';
   return h + '</div></div>';
@@ -1267,54 +1368,53 @@ VIEWS.home = function () {
   var r = role();
   var h = '';
   if (r === 'Admin') {
-    h += head(tr('Panel admin', 'Admin panel'), tr('Ringkasan platform', 'Platform overview'), tr('Pantau screening pakar, kontrak, kasus hak cipta, booking, dan pendapatan platform.', 'Track expert screening, contracts, copyright cases, bookings and platform revenue.'));
+    h += head(tr('Panel admin', 'Admin panel'), tr('Ringkasan platform', 'Platform overview'), tr('Pantau screening pakar, bounty, booking, pencairan poin, dan pendapatan platform.', 'Track expert screening, bounties, bookings, payouts and platform revenue.'));
   } else {
     if (r === 'Expert') h += '<div id="scr-box"></div>';
     h += composerHtml();
-    if (r === 'Client') h += '<div id="rv-pending"></div><div id="credit-widget-box"></div>';
+    if (r === 'Client') h += '<div id="rv-pending"></div>';
+    h += '<div id="credit-widget-box"></div>';
   }
   h += '<div class="stats" id="stats"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
   if (r === 'Admin') {
     h += '<div class="quick">';
     h += qa('shield', tr('Screening pakar', 'Expert screening'), tr('Tinjau latar belakang pendaftar', 'Review applicant backgrounds'), 'verify');
-    h += qa('doc', tr('Verifikasi kontrak', 'Verify contracts'), tr('Tinjau kontrak yang masuk', 'Review incoming contracts'), 'contracts');
-    h += qa('copyright', tr('Kasus hak cipta', 'Copyright cases'), tr('Perbarui status penyelesaian', 'Update resolution status'), 'copyrights');
+    h += qa('wallet', tr('Pencairan poin', 'Payouts'), tr('Proses permintaan pencairan pakar', 'Process expert payout requests'), 'cashouts');
+    h += qa('trophy', 'Bounty', tr('Pantau pertanyaan berhadiah', 'Monitor bountied questions'), 'ask');
     h += qa('calendar', 'Booking', tr('Pantau semua konsultasi', 'Monitor all consultations'), 'bookings');
-    h += qa('users', tr('Rekap kreator', 'Creator recap'), tr('Kontrak, kasus, dan pajak', 'Contracts, cases and taxes'), 'recap');
-    h += qa('chart', tr('Rekap pakar', 'Expert recap'), tr('Pendapatan dan komisi', 'Revenue and fees'), 'xrecap');
+    h += qa('chart', tr('Rekap pakar', 'Expert recap'), tr('Aktivitas dan pendapatan', 'Activity and earnings'), 'xrecap');
+    h += qa('star', tr('Moderasi ulasan', 'Review moderation'), tr('Ulasan yang perlu ditinjau', 'Reviews that need a look'), 'reviews');
     h += '</div>';
   } else {
     h += '<div class="feed-sep">' + tr('Wawasan terbaru dari pakar', 'Latest insights from experts') + '</div>';
     h += listShell('feed', { filter: S.cfg.kategori, filterLabel: tr('Semua kategori', 'All categories') });
   }
   el('view').innerHTML = h;
-  if (r === 'Client') { renderCreditWidget(); loadReviewTargets(); }
+  if (r !== 'Admin') renderCreditWidget();
+  if (r === 'Client') loadReviewTargets();
   if (r === 'Expert') loadMyScreening(function (scr) { renderScrSummary(scr); });
   if (r !== 'Admin') initList('feed');
   fetchHub(function (hub) {
     paintLeftStats();
+    var c = '';
     if (r === 'Expert') {
-      if (el('stats')) el('stats').innerHTML = statCard(tr('Pendapatan bersih', 'Net earnings'), rp(hub.net), tr('estimasi pajak ', 'est. tax ') + rp(hub.tax), 'var(--ok)') + statCard(tr('Konsultasi selesai', 'Completed consultations'), nf(hub.done), nf(hub.incoming) + ' ' + tr('permintaan baru', 'new requests'), 'var(--brand)') + statCard(tr('Jawaban', 'Answers'), nf(hub.answers), tr('di Tanya Pakar', 'in Q&A'), 'var(--info)') + statCard(tr('Postingan', 'Posts'), nf(hub.posts), tr('di feed', 'in the feed'), 'var(--accent)');
-      buildNotif(null, hub);
-      return;
+      c += statCard(tr('Bounty dimenangkan', 'Bounties won'), nf(hub.bountyWins), nf(hub.bountyPoin) + ' ' + tr('poin diterima', 'points earned'), 'var(--accent)');
+      c += statCard(tr('Konsultasi selesai', 'Completed consultations'), nf(hub.done), nf(hub.incoming) + ' ' + tr('permintaan baru', 'new requests'), 'var(--brand)');
+      c += statCard(tr('Jawaban', 'Answers'), nf(hub.answers), tr('di Bounty', 'on Bounty'), 'var(--info)');
+      c += hub.pro ? statCard(tr('Profil dilihat', 'Profile views'), nf(hub.views || 0), tr('statistik Pro', 'Pro stats'), 'var(--ok)') : statCard(tr('Postingan', 'Posts'), nf(hub.posts), tr('di feed', 'in the feed'), 'var(--ok)');
+    } else if (r === 'Admin') {
+      c += statCard(tr('Pakar terverifikasi', 'Verified experts'), nf(hub.experts), nf(hub.pendingVerif) + ' ' + tr('menunggu screening', 'awaiting screening'), 'var(--brand)');
+      c += statCard(tr('Bounty aktif', 'Active bounties'), nf(hub.bountyOpen), tr('pertanyaan berhadiah', 'questions with points'), 'var(--accent)');
+      c += statCard(tr('Pencairan menunggu', 'Payouts pending'), nf(hub.cashPending), tr('perlu ditransfer', 'to transfer'), 'var(--warn)');
+      c += statCard(tr('Pendapatan platform', 'Platform revenue'), rp(hub.revenue), tr('biaya layanan + Pro', 'service fees + Pro'), 'var(--ok)');
+    } else {
+      c += statCard(tr('Bounty aktif', 'Active bounties'), nf(hub.bountyOpen), nf(hub.bountyHeld) + ' ' + tr('poin ditahan', 'points held'), 'var(--accent)');
+      c += statCard(tr('Siap dipilih', 'Ready to pick'), nf(hub.toPick), tr('pertanyaan sudah dijawab', 'questions answered'), 'var(--ok)');
+      c += statCard('Booking', nf(hub.bookings), nf(hub.pending) + ' ' + tr('menunggu', 'pending'), 'var(--brand)');
+      c += statCard(tr('Pertanyaan', 'Questions'), nf(hub.questions), nf(hub.open) + ' ' + tr('belum terjawab', 'unanswered'), 'var(--info)');
     }
-    fetchStats(function (st) {
-      paintLeftStats();
-      var c = '';
-      if (r === 'Admin') {
-        c += statCard(tr('Pakar terverifikasi', 'Verified experts'), nf(hub.experts), nf(hub.pendingVerif) + ' ' + tr('menunggu screening', 'awaiting screening'), 'var(--brand)');
-        c += statCard(tr('Kontrak menunggu', 'Contracts pending'), nf(st.contracts.pending), tr('dari ', 'of ') + nf(st.contracts.total) + ' ' + tr('kontrak', 'contracts'), 'var(--warn)');
-        c += statCard(tr('Kasus hak cipta aktif', 'Active copyright cases'), nf(st.copyrights.open), nf(st.copyrights.done) + ' ' + tr('sudah ditutup', 'closed'), 'var(--info)');
-        c += statCard(tr('Pendapatan platform', 'Platform revenue'), rp(hub.revenue), tr('dari transaksi ', 'from bookings worth ') + rp(hub.gmv), 'var(--ok)');
-      } else {
-        c += statCard(tr('Kontrak', 'Contracts'), nf(st.contracts.total), nf(st.contracts.verified) + ' ' + tr('terverifikasi', 'verified'), 'var(--brand)');
-        c += statCard('Booking', nf(hub.bookings), nf(hub.pending) + ' ' + tr('menunggu', 'pending'), 'var(--ok)');
-        c += statCard(tr('Pertanyaan', 'Questions'), nf(hub.questions), nf(hub.open) + ' ' + tr('belum terjawab', 'unanswered'), 'var(--info)');
-        c += statCard(tr('Estimasi pajak', 'Estimated tax'), rp(st.taxes.tax), tr('dari ', 'on ') + rp(st.taxes.income), 'var(--accent)');
-      }
-      if (el('stats')) el('stats').innerHTML = c;
-      buildNotif(st, hub);
-    });
+    if (el('stats')) el('stats').innerHTML = c;
+    buildNotif(null, hub);
   });
 };
 
@@ -1521,9 +1621,10 @@ VIEWS.expert = function () {
     x += '<p class="prof-head">' + tr('Pakar hukum', 'Legal expert') + (p.bidang ? ' &bull; ' + esc(p.bidang) : '') + '</p>';
     x += '<div class="rate-line" style="margin-top:6px">' + rateChip(sm.avg, sm.n, sm.teladan) + '</div>';
     x += '<p class="prof-meta">' + nf(p.answers) + ' ' + tr('jawaban', 'answers') + ' &bull; ' + nf(p.done) + ' ' + tr('konsultasi selesai', 'completed sessions') + ' &bull; ' + nf(p.posts) + ' ' + tr('postingan', 'posts') + '</p>';
+    x += '<p class="prof-rate">' + ic('coin') + '<b>' + nf(p.tarif) + ' ' + tr('poin', 'points') + '</b> ' + tr('per sesi 30 menit', 'per 30-minute session') + ' <span class="muted">(' + poinRp(p.tarif) + ')</span>' + (p.pro ? ' <span class="pro-b">PRO</span>' : '') + '</p>';
     if (p.bio) x += '<p class="prof-bio">' + escBr(p.bio) + '</p>';
     x += '<div class="pf-actions">';
-    if (role() === 'Client') x += '<button class="btn sm" data-action="book" data-user="' + esc(p.username) + '" data-nama="' + esc(p.nama) + '">' + tr('Booking konsultasi', 'Book a consultation') + '</button>';
+    if (role() === 'Client') x += '<button class="btn sm" data-action="book" data-user="' + esc(p.username) + '" data-nama="' + esc(p.nama) + '" data-tarif="' + esc(p.tarif) + '">' + tr('Booking konsultasi', 'Book a consultation') + '</button>';
     if (me) x += '<button class="btn ghost sm" data-action="nav" data-view="profile">' + tr('Edit profil', 'Edit profile') + '</button>';
     x += '</div></div></div>';
     top.innerHTML = x;
@@ -1550,20 +1651,35 @@ VIEWS.feed = function () {
 };
 
 VIEWS.ask = function () {
-  var h = head(tr('Tanya Pakar', 'Q&A'), tr('Tanya pakar hukum', 'Ask a legal expert'), tr('Ajukan pertanyaan, pakar terverifikasi akan menjawab.', 'Ask a question and verified experts will answer.'));
-  if (role() === 'Client') {
+  var r = role();
+  var h = head('Bounty', tr('Bounty pertanyaan', 'Question bounty'), r === 'Expert' ? tr('Jawab pertanyaan berhadiah poin. Jawaban yang dipilih penanya mendapat seluruh poinnya.', 'Answer questions with points on them. The answer the asker picks takes all the points.') : tr('Pasang poin di pertanyaan Anda. Pakar berlomba menjawab, Anda pilih jawaban terbaik.', 'Put points on your question. Experts compete to answer and you pick the best one.'));
+  if (r === 'Client') {
     h += '<div id="credit-widget-box"></div>';
-    h += '<div class="card"><h3 style="margin-bottom:12px">' + tr('Ajukan pertanyaan', 'Ask a question') + '</h3><div class="fld"><select class="sel" id="q-kat" aria-label="' + tr('Kategori', 'Category') + '"><option value="">' + tr('Pilih kategori...', 'Choose a category...') + '</option>' + opts(S.cfg.kategori) + '</select></div><div class="fld"><textarea class="inp" id="q-teks" maxlength="600" placeholder="' + tr('Jelaskan situasi Anda. Hindari data pribadi yang sensitif.', 'Describe your situation. Avoid sensitive personal data.') + '"></textarea></div><button class="btn sm" id="btn-q" data-action="ask">' + tr('Kirim pertanyaan', 'Send question') + '</button>';
-    h += '<p class="cost">' + tr('Biaya: 1 kuota bulanan, atau ', 'Cost: 1 monthly quota, or ') + nf(S.cfg.cost.question) + tr(' poin bila kuota habis.', ' points once the quota runs out.') + '</p></div>';
+    h += '<div class="card"><h3 style="margin-bottom:12px">' + tr('Ajukan pertanyaan', 'Ask a question') + '</h3><div class="fld"><select class="sel" id="q-kat" aria-label="' + tr('Kategori', 'Category') + '"><option value="">' + tr('Pilih kategori...', 'Choose a category...') + '</option>' + opts(S.cfg.kategori) + '</select></div><div class="fld"><textarea class="inp" id="q-teks" maxlength="600" placeholder="' + tr('Jelaskan situasi Anda. Hindari data pribadi yang sensitif.', 'Describe your situation. Avoid sensitive personal data.') + '"></textarea></div>';
+    h += '<div class="fld"><label for="q-bounty">' + tr('Bounty (poin)', 'Bounty (points)') + '</label><div class="bty-row"><input class="inp" id="q-bounty" type="number" min="0" step="1" inputmode="numeric" value="0" data-live="bounty">';
+    var qs = [0, 50, 100, 200, 500];
+    for (var i = 0; i < qs.length; i++) h += '<button type="button" class="chip-b" data-action="bty-set" data-v="' + qs[i] + '">' + (qs[i] ? nf(qs[i]) : tr('Gratis', 'Free')) + '</button>';
+    h += '</div><span class="hint" id="q-bhint"></span></div><div id="q-sorot-box"></div>';
+    h += '<button class="btn sm" id="btn-q" data-action="ask">' + tr('Kirim pertanyaan', 'Send question') + '</button>';
+    h += '<p class="cost">' + tr('Poin bounty ditahan sistem. Tidak ada jawaban dalam 7 hari: poin kembali. Tidak memilih dalam 7 hari: poin diberikan ke jawaban pertama.', 'Bounty points are held by the system. No answer in 7 days: points come back. No pick in 7 days: points go to the first answer.') + '</p></div>';
   }
-  h += listShell('ask', { filter: STATUS.ask, filterLabel: tr('Semua status', 'All statuses'), filterIsStatus: true });
+  var fh = '<option value="Bounty">' + tr('Bounty aktif', 'Active bounties') + '</option>';
+  for (var k = 0; k < STATUS.ask.length; k++) fh += '<option value="' + esc(STATUS.ask[k]) + '">' + esc(stLabel(STATUS.ask[k])) + '</option>';
+  h += listShell('ask', { filterHtml: fh, filterLabel: tr('Semua pertanyaan', 'All questions') });
   el('view').innerHTML = h;
-  if (role() === 'Client') renderCreditWidget();
+  if (r === 'Client') { renderCreditWidget(); updateBountyHint(); }
   initList('ask');
 };
+function updateBountyHint() {
+  var b = Math.max(0, Math.floor(Number(val('q-bounty')) || 0)), x = el('q-bhint');
+  if (!x) return;
+  var bal = S.credit ? S.credit.poin : null;
+  x.innerHTML = b ? '= ' + poinRp(b) + (bal != null && b > bal ? ' &bull; <b class="minus">' + tr('saldo kurang', 'not enough points') + '</b>' : '') : tr('Tanpa bounty, pertanyaan tetap tampil tapi prioritasnya rendah.', 'Without a bounty your question still shows, just lower in the list.');
+}
 
 VIEWS.experts = function () {
-  var h = head(tr('Direktori', 'Directory'), tr('Pakar hukum', 'Legal experts'), tr('Diurutkan berdasarkan rating dan ulasan client. Pilih pakar sesuai bidang Anda lalu booking konsultasi.', 'Sorted by client ratings and reviews. Pick an expert in your area and book a consultation.'));
+  var h = head(tr('Direktori', 'Directory'), tr('Pakar hukum', 'Legal experts'), tr('Diurutkan berdasarkan rating dan ulasan client. Tarif dalam poin ditentukan masing-masing pakar.', 'Sorted by client ratings and reviews. Each expert sets their own rate in points.'));
+  h += '<div id="feat-box"></div>';
   h += listShell('experts', { filter: S.cfg.kategori, filterLabel: tr('Semua bidang', 'All areas') });
   el('view').innerHTML = h;
   initList('experts');
@@ -1587,6 +1703,77 @@ VIEWS.earnings = function () {
     el('stats').innerHTML = statCard(tr('Pendapatan kotor', 'Gross earnings'), rp(st.gross), nf(st.done) + ' ' + tr('konsultasi', 'consultations'), 'var(--brand)') + statCard(tr('Komisi platform', 'Platform fee'), rp(st.comm), Math.round(S.cfg.commission * 100) + '% ' + tr('dari tiap sesi', 'per session'), 'var(--accent)') + statCard(tr('Bersih', 'Net'), rp(st.net), tr('estimasi pajak ', 'est. tax ') + rp(st.tax), 'var(--ok)');
   });
   initList('earnings');
+};
+
+VIEWS.wallet = function () {
+  var r = role();
+  var h = head(tr('Dompet', 'Wallet'), tr('Dompet poin', 'Points wallet'), r === 'Expert' ? tr('Poin dari bounty dan konsultasi. Cairkan ke rekening atau e-wallet Anda.', 'Points from bounties and consultations. Cash them out to your bank or e-wallet.') : tr('1 poin = Rp100. Pakai poin untuk bounty pertanyaan dan booking konsultasi.', '1 point = Rp100. Use points for question bounties and bookings.'));
+  h += '<div id="credit-widget-box"></div><div class="wallet-grid">';
+  if (r === 'Client') {
+    h += '<div class="card"><h3>' + tr('Isi ulang poin', 'Top up points') + '</h3><p class="muted sm">' + tr('Bayar lewat QRIS atau virtual account (disimulasikan).', 'Pay with QRIS or a virtual account (simulated).') + '</p>' + pkgGridHtml() + '</div>';
+  } else {
+    var pc = S.cfg.poin || { cashMin: 1000 };
+    h += '<div class="card"><h3 style="margin-bottom:12px">' + tr('Cairkan poin', 'Cash out points') + '</h3>';
+    h += '<div class="fld"><label for="co-poin">' + tr('Jumlah poin (min. ', 'Points (min. ') + nf(pc.cashMin) + ')</label><input class="inp" id="co-poin" type="number" min="' + pc.cashMin + '" step="1" inputmode="numeric" value="' + pc.cashMin + '" data-live="cash"></div>';
+    h += '<div class="row2"><div class="fld"><label for="co-bank">' + tr('Bank / e-wallet', 'Bank / e-wallet') + '</label><input class="inp" id="co-bank" list="co-banks" placeholder="BCA"><datalist id="co-banks"><option value="BCA"><option value="Mandiri"><option value="BRI"><option value="BNI"><option value="CIMB Niaga"><option value="GoPay"><option value="OVO"><option value="DANA"></datalist></div>';
+    h += '<div class="fld"><label for="co-norek">' + tr('Nomor rekening / HP', 'Account / phone number') + '</label><input class="inp" id="co-norek" inputmode="numeric" maxlength="20"></div></div>';
+    h += '<div class="fld"><label for="co-nama">' + tr('Atas nama', 'Account holder') + '</label><input class="inp" id="co-nama" maxlength="60" value="' + esc(S.user.nama) + '"></div>';
+    h += '<div class="sum" id="co-sum"></div><button class="btn" id="btn-co" data-action="cashout">' + tr('Ajukan pencairan', 'Request payout') + '</button>';
+    h += '<p class="cost">' + tr('Poin langsung dipotong saat diajukan dan dikembalikan bila admin menolak. Transfer diproses manual oleh admin.', 'Points are deducted when you submit and returned if the admin rejects. Transfers are processed manually by the admin.') + '</p></div>';
+  }
+  h += proCardHtml() + '</div>';
+  if (r === 'Expert') h += listShell('cashouts', { title: tr('Riwayat pencairan', 'Payout history'), heads: cashoutHeads() });
+  h += listShell('ledger', { title: tr('Mutasi poin', 'Points history'), heads: [tr('Tanggal', 'Date'), tr('Jenis', 'Type'), tr('Poin', 'Points'), tr('Saldo', 'Balance'), tr('Keterangan', 'Note')] });
+  el('view').innerHTML = h;
+  renderCreditWidget(true);
+  if (r === 'Expert') loadMore('cashouts', true);
+  initList('ledger');
+};
+function updateCashSum() {
+  var box = el('co-sum');
+  if (!box) return;
+  var pc = S.cfg.poin || { rp: 100, fee: 0.3 }, poin = Math.max(0, Math.floor(Number(val('co-poin')) || 0));
+  var fee = S.credit && S.credit.fee != null ? S.credit.fee : pc.fee, gross = poin * pc.rp, feeRp = Math.round(gross * fee);
+  box.innerHTML = '<div><span>' + tr('Nilai poin', 'Points value') + '</span><b>' + rp(gross) + '</b></div><div><span>' + tr('Biaya layanan ', 'Service fee ') + Math.round(fee * 100) + '%' + (S.credit && S.credit.pro ? ' (Pro)' : '') + '</span><b>- ' + rp(feeRp) + '</b></div><div><span>' + tr('Anda terima', 'You receive') + '</span><b class="plus">' + rp(gross - feeRp) + '</b></div>';
+}
+function submitCashout() {
+  var pc = S.cfg.poin || { cashMin: 1000 };
+  var p = { poin: Math.floor(Number(val('co-poin')) || 0), bank: val('co-bank'), norek: val('co-norek').replace(/\s/g, ''), nama: val('co-nama') };
+  if (p.poin < pc.cashMin) { toast(tr('Minimal pencairan ', 'Minimum payout is ') + nf(pc.cashMin) + ' ' + tr('poin.', 'points.'), 'err'); return; }
+  if (S.credit && p.poin > S.credit.poin) { toast(tr('Saldo poin tidak cukup.', 'Not enough points.'), 'err'); return; }
+  if (!p.bank) { toast(tr('Isi nama bank atau e-wallet.', 'Enter the bank or e-wallet.'), 'err'); el('co-bank').focus(); return; }
+  if (!/^[0-9]{6,20}$/.test(p.norek)) { toast(tr('Nomor rekening/e-wallet 6-20 digit angka.', 'Account number must be 6-20 digits.'), 'err'); el('co-norek').focus(); return; }
+  if (!p.nama) { toast(tr('Isi nama pemilik rekening.', 'Enter the account holder.'), 'err'); return; }
+  if (!confirm(tr('Cairkan ', 'Cash out ') + nf(p.poin) + ' ' + tr('poin ke ', 'points to ') + p.bank + ' ' + p.norek + '?')) return;
+  busy('btn-co', true);
+  api('apiCashout', [S.token, p], function (res) {
+    busy('btn-co', false);
+    if (!res.ok) { toast(res.msg, 'err'); return; }
+    setWallet(res.wallet);
+    var n = prependRow('cashouts', cashoutRow(res.row));
+    if (n) n.classList.add('fresh');
+    loadMore('ledger', true);
+    resetStats();
+    toast(tr('Pengajuan pencairan terkirim. Anda akan menerima ', 'Payout requested. You will receive ') + rp(res.row[6]) + '.', 'ok');
+  }, function (m) { busy('btn-co', false); toast(m, 'err'); });
+}
+function processCashout(btn) {
+  var row = btn.closest('tr'), v = String(btn.getAttribute('data-v'));
+  if (v === 'Ditolak' && !confirm(tr('Tolak pengajuan ini? Poin akan dikembalikan ke pakar.', 'Reject this request? The points go back to the expert.'))) return;
+  row.classList.add('is-pending');
+  api('apiProcessCashout', [S.token, String(row.getAttribute('data-id')), String(row.getAttribute('data-tgl')), v], function (res) {
+    if (!res.ok) { row.classList.remove('is-pending'); toast(res.msg, 'err'); return; }
+    var nn = htmlToRow(cashoutRow(res.row));
+    row.parentNode.replaceChild(nn, row);
+    resetStats();
+    toast(v === 'Dibayar' ? tr('Ditandai sudah dibayar.', 'Marked as paid.') : tr('Pengajuan ditolak, poin dikembalikan.', 'Request rejected, points returned.'), 'ok');
+  }, function (m) { row.classList.remove('is-pending'); toast(m, 'err'); });
+}
+VIEWS.cashouts = function () {
+  var h = head(tr('Pencairan', 'Payouts'), tr('Pencairan poin pakar', 'Expert payouts'), tr('Transfer ke rekening pakar, lalu tandai dibayar. Menolak pengajuan mengembalikan poin ke pakar.', 'Transfer to the expert, then mark it paid. Rejecting a request returns the points to the expert.'));
+  h += listShell('cashouts', { title: tr('Pengajuan pencairan', 'Payout requests'), heads: cashoutHeads(), filter: STATUS.cashouts, filterLabel: tr('Semua status', 'All statuses'), filterIsStatus: true });
+  el('view').innerHTML = h;
+  initList('cashouts');
 };
 
 VIEWS.verify = function () {
@@ -1768,8 +1955,8 @@ VIEWS.xrecap = function () {
 };
 
 VIEWS.recap = function () {
-  var h = head(tr('Rekapitulasi', 'Recap'), tr('Data kreator', 'Creator data'), tr('Ringkasan aktivitas legal dan pendapatan setiap kreator.', 'Summary of legal activity and earnings per creator.'));
-  h += listShell('recap', { title: tr('Rekap per kreator', 'By creator'), heads: legacyHeads('recap') });
+  var h = head(tr('Rekapitulasi', 'Recap'), tr('Data client', 'Client data'), tr('Ringkasan aktivitas legal dan pendapatan setiap client.', 'Summary of legal activity and earnings per client.'));
+  h += listShell('recap', { title: tr('Rekap per client', 'By client'), heads: legacyHeads('recap') });
   el('view').innerHTML = h;
   initList('recap');
 };
@@ -1787,12 +1974,22 @@ VIEWS.profile = function () {
   h += '<input type="file" id="pf-file" accept="image/jpeg,image/png,image/webp" data-live="photo" hidden></div></div>';
   h += '<div class="card"><h3 style="margin-bottom:14px">' + tr('Edit profil', 'Edit profile') + '</h3>';
   h += '<div class="fld"><label for="pf-nama">' + tr('Nama tampilan', 'Display name') + '</label><input class="inp" id="pf-nama" maxlength="60" value="' + esc(u.nama) + '"></div>';
-  if (u.role === 'Expert') h += '<div class="fld"><label for="pf-bidang">' + tr('Bidang keahlian', 'Area of expertise') + '</label><select class="sel" id="pf-bidang">' + opts(S.cfg.kategori, u.bidang) + '</select></div>';
+  if (u.role === 'Expert') {
+    h += '<div class="fld"><label for="pf-bidang">' + tr('Bidang keahlian', 'Area of expertise') + '</label><select class="sel" id="pf-bidang">' + opts(S.cfg.kategori, u.bidang) + '</select></div>';
+    h += '<div class="fld"><label for="pf-tarif">' + tr('Tarif konsultasi 30 menit (poin)', '30-minute consultation rate (points)') + '</label><input class="inp" id="pf-tarif" type="number" min="' + ((S.cfg.poin || {}).bookMin || 100) + '" step="10" inputmode="numeric" value="' + esc(u.tarif || '') + '" data-live="tarif"><span class="hint" id="pf-tarif-h"></span></div>';
+  }
   h += '<div class="fld"><label for="pf-bio">' + tr('Bio singkat (tampil sebagai kutipan Pakar Pilihan)', 'Short bio (shown as the Spotlight quote)') + '</label><textarea class="inp" id="pf-bio" maxlength="240" placeholder="' + tr('Ceritakan keahlian atau kebutuhan hukum Anda...', 'Tell us about your expertise or legal needs...') + '">' + esc(u.bio) + '</textarea></div>';
   h += '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn sm" id="btn-pf" data-action="save-profile">' + tr('Simpan', 'Save') + '</button><button class="btn ghost sm" data-action="logout">' + tr('Keluar', 'Sign out') + '</button></div></div>';
   el('view').innerHTML = h;
   paintProfilePhoto();
+  updateTarifHint();
 };
+function updateTarifHint() {
+  var x = el('pf-tarif-h');
+  if (!x) return;
+  var t = Math.floor(Number(val('pf-tarif')) || 0), mn = (S.cfg.poin || {}).bookMin || 100;
+  x.textContent = '= ' + poinRp(t) + tr(' per sesi. Minimal ', ' per session. Minimum ') + nf(mn) + tr(' poin. Sesi 60 menit dan review dokumen = 2x tarif.', ' points. 60-minute sessions and document reviews = 2x the rate.');
+}
 function paintProfilePhoto() {
   var box = el('pf-av');
   if (!box) return;
@@ -2224,10 +2421,12 @@ function submitPost() {
   }, undo);
 }
 function submitQuestion() {
-  var p = { kategori: val('q-kat'), teks: val('q-teks') };
+  var p = { kategori: val('q-kat'), teks: val('q-teks'), bounty: Math.max(0, Math.floor(Number(val('q-bounty')) || 0)), sorot: !!(el('q-sorot') && el('q-sorot').checked) };
   if (!p.kategori) { toast(tr('Pilih kategori.', 'Choose a category.'), 'err'); return; }
   if (p.teks.length < 10) { toast(tr('Pertanyaan minimal 10 karakter.', 'A question needs at least 10 characters.'), 'err'); el('q-teks').focus(); return; }
-  var temp = ['...', nowStamp(), S.user.username, p.kategori, p.teks, 'Terbuka', '0', S.user.nama];
+  if (S.credit && p.bounty > S.credit.poin) { toast(tr('Poin Anda tidak cukup untuk bounty ini.', 'Not enough points for this bounty.'), 'err'); setTimeout(openTopUp, 300); return; }
+  if (p.sorot && !p.bounty) { toast(tr('Pasang poin bounty dulu untuk menyorot pertanyaan.', 'Add bounty points before featuring a question.'), 'err'); return; }
+  var temp = ['...', nowStamp(), S.user.username, p.kategori, p.teks, 'Terbuka', '0', S.user.nama, String(p.bounty), '', '', '', p.sorot ? '1' : '0', ''];
   var node = prependRow('ask', questionHtml(temp, true));
   el('q-teks').value = '';
   busy('btn-q', true);
@@ -2245,9 +2444,10 @@ function submitQuestion() {
       if (node && node.parentNode) node.parentNode.replaceChild(nn, node);
       L.ask.keys[res.row[0] + '|' + res.row[1]] = 1;
     } else if (node) { node.classList.remove('is-pending'); }
-    applyCreditInfo(res.creditInfo);
+    el('q-bounty').value = '0'; updateBountyHint();
+    setWallet(res.wallet);
     resetStats();
-    toast(tr('Pertanyaan terkirim.', 'Question sent.'), 'ok');
+    toast(p.bounty ? tr('Bounty terpasang: ', 'Bounty posted: ') + nf(p.bounty) + ' ' + tr('poin ditahan sampai Anda memilih jawaban.', 'points held until you pick an answer.') : tr('Pertanyaan terkirim.', 'Question sent.'), 'ok');
   }, undo);
 }
 function toggleLike(btn) {
@@ -2273,8 +2473,9 @@ function toggleAnswers(btn) {
   box.innerHTML = '<div class="loader"><span class="spin"></span> ' + tr('Memuat jawaban...', 'Loading answers...') + '</div>';
   api('apiAnswers', [S.token, String(item.getAttribute('data-id')), String(item.getAttribute('data-tgl'))], function (res) {
     if (!res.ok) { box.innerHTML = ''; toast(res.msg, 'err'); return; }
+    item.__q = res.q || null;
     var h = '';
-    for (var i = 0; i < res.rows.length; i++) h += answerHtml(res.rows[i], false);
+    for (var i = 0; i < res.rows.length; i++) h += answerHtml(res.rows[i], false, item.__q);
     box.innerHTML = h || '<p class="muted sm">' + tr('Belum ada jawaban.', 'No answers yet.') + '</p>';
     box.setAttribute('data-loaded', '1');
     ensurePhotos(box);
@@ -2298,7 +2499,7 @@ function sendAnswer(btn) {
   box.hidden = false;
   if (box.getAttribute('data-loaded') !== '1') { box.innerHTML = ''; box.setAttribute('data-loaded', '1'); }
   var u = S.user;
-  var node = htmlToNode(answerHtml(['...', nowStamp(), u.username, teks, u.nama, u.bidang], true));
+  var node = htmlToNode(answerHtml(['...', nowStamp(), u.username, teks, u.nama, u.bidang, '', '0', '0'], true, null));
   var empt = box.querySelector('p.muted');
   if (empt) empt.remove();
   box.appendChild(node);
@@ -2309,7 +2510,7 @@ function sendAnswer(btn) {
     if (!res.ok) { undo(res.msg); return; }
     busyEl(btn, false);
     if (res.row) {
-      var nn = htmlToNode(answerHtml(res.row, false));
+      var nn = htmlToNode(answerHtml(res.row, false, null));
       nn.classList.add('fresh');
       node.parentNode.replaceChild(nn, node);
     } else { node.classList.remove('is-pending'); }
@@ -2324,34 +2525,75 @@ function sendAnswer(btn) {
   }, undo);
 }
 
+// Client memilih jawaban terbaik: poin bounty pindah ke pakar, pertanyaan ditutup
+function pickAnswer(btn) {
+  var it = btn.closest('.a-item'), item = btn.closest('.item.q'), q = item.__q || {};
+  var nama = String(it.getAttribute('data-xn'));
+  if (!confirm(tr('Pilih jawaban dari ', 'Choose the answer from ') + nama + '?' + (q.bounty ? ' ' + nf(q.bounty) + ' ' + tr('poin akan dikirim ke pakar ini dan pertanyaan ditutup.', 'points go to this expert and the question closes.') : ''))) return;
+  busyEl(btn, true);
+  api('apiPickAnswer', [S.token, String(item.getAttribute('data-id')), String(item.getAttribute('data-tgl')), String(it.getAttribute('data-id')), String(it.getAttribute('data-tgl'))], function (res) {
+    busyEl(btn, false);
+    if (!res.ok) { toast(res.msg, 'err'); return; }
+    var st = item.querySelector('.st');
+    if (st) st.innerHTML = badge('Selesai');
+    var rb = item.querySelector('[data-action=open-reply]');
+    if (rb) rb.remove();
+    var line = htmlToNode('<p class="won-line">' + ic('trophy') + tr('Jawaban terbaik: ', 'Best answer: ') + '<b>' + esc(nama) + '</b>' + (res.bounty ? ' &bull; +' + nf(res.bounty) + ' ' + tr('poin', 'pts') : '') + '</p>');
+    var txt = item.querySelector('.itext');
+    if (txt && txt.nextSibling) txt.parentNode.insertBefore(line, txt.nextSibling);
+    var box = item.querySelector('.ans');
+    box.setAttribute('data-loaded', '0'); box.hidden = true;
+    toggleAnswers(item.querySelector('[data-action=toggle-ans]'));
+    setWallet(res.wallet);
+    resetStats();
+    toast(res.bounty ? nf(res.bounty) + ' ' + tr('poin dikirim ke ', 'points sent to ') + nama + '.' : tr('Jawaban terbaik dipilih.', 'Best answer chosen.'), 'ok');
+  }, function (m) { busyEl(btn, false); toast(m, 'err'); });
+}
+
 /* ----- Booking (modal) ----- */
 function openModal(html) { el('sheet').innerHTML = html; el('modal').hidden = false; }
 function closeModal() { el('modal').hidden = true; el('sheet').innerHTML = ''; }
 function openBook(item) {
-  var u = String(item.getAttribute('data-user')), nama = String(item.getAttribute('data-nama'));
+  var u = String(item.getAttribute('data-user')), nama = String(item.getAttribute('data-nama')), tarif = parseInt(item.getAttribute('data-tarif'), 10) || 0;
+  if (!S.credit) renderCreditWidget();
+  if (tarif) { bookModal(u, nama, tarif); return; }
+  openModal('<div class="loader"><span class="spin"></span> ' + tr('Memuat tarif pakar...', 'Loading the expert rate...') + '</div>');
+  api('apiExpertProfile', [S.token, u], function (res) {
+    if (!res.ok) { closeModal(); toast(res.msg, 'err'); return; }
+    bookModal(u, res.p.nama || nama, res.p.tarif);
+  }, function (m) { closeModal(); toast(m, 'err'); });
+}
+function bookModal(u, nama, tarif) {
+  S.bk = { tarif: Number(tarif) || 0 };
   var sv = S.cfg.services, keys = Object.keys(sv);
-  var h = '<h3>' + tr('Booking konsultasi', 'Book a consultation') + '</h3><p class="muted sm" style="margin-bottom:16px">' + tr('dengan ', 'with ') + esc(nama) + '</p>';
+  var h = '<h3>' + tr('Booking konsultasi', 'Book a consultation') + '</h3><p class="muted sm" style="margin-bottom:16px">' + tr('dengan ', 'with ') + esc(nama) + ' &bull; ' + nf(tarif) + ' ' + tr('poin per sesi 30 menit', 'points per 30-minute session') + '</p>';
   h += '<div class="fld"><label for="bk-svc">' + tr('Layanan', 'Service') + '</label><select class="sel" id="bk-svc" data-live="bk">';
-  for (var i = 0; i < keys.length; i++) h += '<option value="' + esc(keys[i]) + '">' + esc(sv[keys[i]].label) + ' - ' + rp(sv[keys[i]].price) + '</option>';
-  h += '</select></div><div class="sum"><div><span>' + tr('Tarif', 'Price') + '</span><b id="bk-price"></b></div><div><span>' + tr('Komisi platform (dari pakar)', 'Platform fee (paid by expert)') + '</span><b id="bk-comm"></b></div></div>';
-  h += '<p class="muted sm" style="margin-bottom:16px">' + tr('Pembayaran disimulasikan pada versi prototipe ini.', 'Payment is simulated in this prototype.') + '</p>';
+  for (var i = 0; i < keys.length; i++) h += '<option value="' + esc(keys[i]) + '">' + esc(sv[keys[i]].label) + ' - ' + nf(tarif * sv[keys[i]].x) + ' ' + tr('poin', 'pts') + '</option>';
+  h += '</select></div><div class="sum"><div><span>' + tr('Tarif', 'Price') + '</span><b id="bk-price"></b></div><div><span>' + tr('Saldo Anda', 'Your balance') + '</span><b id="bk-bal">-</b></div><div><span>' + tr('Sisa setelah booking', 'Left after booking') + '</span><b id="bk-left">-</b></div></div>';
+  h += '<div class="note warn" id="bk-warn" hidden>' + tr('Poin Anda belum cukup. ', 'You do not have enough points. ') + '<button class="lnk" type="button" data-action="topup">' + tr('Top-up sekarang', 'Top up now') + '</button></div>';
+  h += '<p class="muted sm" style="margin-bottom:16px">' + tr('Poin ditahan sampai konsultasi selesai. Jika pakar menolak, poin kembali otomatis.', 'Points are held until the session is done. If the expert declines, they come back automatically.') + '</p>';
   h += '<div style="display:flex;gap:10px"><button class="btn" data-action="confirm-book" data-u="' + esc(u) + '" style="flex:1">' + tr('Kirim permintaan', 'Send request') + '</button><button class="btn ghost" data-action="close-x">' + tr('Batal', 'Cancel') + '</button></div>';
   openModal(h);
   updateBookSum();
 }
 function updateBookSum() {
   var s = S.cfg.services[val('bk-svc')];
-  var price = s ? s.price : 0;
-  if (el('bk-price')) { el('bk-price').textContent = rp(price); el('bk-comm').textContent = rp(price * S.cfg.commission); }
+  if (!el('bk-price') || !S.bk) return;
+  var poin = S.bk.tarif * (s ? s.x : 1), bal = S.credit ? S.credit.poin : null;
+  el('bk-price').textContent = nf(poin) + ' ' + tr('poin', 'pts') + ' (' + poinRp(poin) + ')';
+  el('bk-bal').textContent = bal == null ? '-' : nf(bal) + ' ' + tr('poin', 'pts');
+  el('bk-left').textContent = bal == null ? '-' : nf(bal - poin) + ' ' + tr('poin', 'pts');
+  el('bk-warn').hidden = !(bal != null && bal < poin);
 }
 function confirmBook(btn) {
   var p = { expert: String(btn.getAttribute('data-u')), svc: val('bk-svc') };
   closeModal();
   toast(tr('Mengirim permintaan booking...', 'Sending booking request...'), 'info');
   api('apiCreateBooking', [S.token, p], function (res) {
-    if (!res.ok) { toast(res.msg, 'err'); return; }
+    if (!res.ok) { toast(res.msg, 'err'); maybeTopUp(res.msg); return; }
+    setWallet(res.wallet);
     resetStats();
-    toast(tr('Booking terkirim', 'Booking sent') + (res.row ? ': ' + res.row[0] : '') + '. ' + tr('Menunggu konfirmasi pakar.', 'Waiting for the expert to confirm.'), 'ok');
+    toast(tr('Booking terkirim', 'Booking sent') + (res.row ? ': ' + res.row[0] : '') + '. ' + nf(res.row ? res.row[9] : 0) + ' ' + tr('poin ditahan sampai sesi selesai.', 'points held until the session ends.'), 'ok');
   }, function (m) { toast(m, 'err'); });
 }
 
@@ -2377,7 +2619,7 @@ function changeStatus(sel, fn, argsFn, after) {
   }, back);
 }
 function saveProfile() {
-  var p = { nama: val('pf-nama'), bio: val('pf-bio'), bidang: el('pf-bidang') ? val('pf-bidang') : '' };
+  var p = { nama: val('pf-nama'), bio: val('pf-bio'), bidang: el('pf-bidang') ? val('pf-bidang') : '', tarif: el('pf-tarif') ? val('pf-tarif') : '' };
   if (!p.nama) { toast(tr('Nama wajib diisi.', 'Name is required.'), 'err'); return; }
   busy('btn-pf', true);
   api('apiUpdateProfile', [S.token, p], function (res) {
@@ -2444,6 +2686,11 @@ document.addEventListener('click', function (e) {
   else if (a === 'notif') toggleNotif();
   else if (a === 'notif-read') markNotifRead();
   else if (a === 'topup') { closeDrops(); openTopUp(); }
+  else if (a === 'pro-open') { closeDrops(); openTopUp('pro'); }
+  else if (a === 'pick-answer') pickAnswer(t);
+  else if (a === 'bty-set') { if (el('q-bounty')) { el('q-bounty').value = String(t.getAttribute('data-v')); updateBountyHint(); } }
+  else if (a === 'cashout') submitCashout();
+  else if (a === 'co-pay') processCashout(t);
   else if (a === 'do-topup') doTopUp(t);
   else if (a === 'more') loadMore(t.getAttribute('data-key'), false);
   else if (a === 'submit-contracts') submitContract();
@@ -2474,6 +2721,9 @@ document.addEventListener('input', function (e) {
   var lv = t.getAttribute ? t.getAttribute('data-live') : null;
   if (lv === 'draft') updateDraft();
   else if (lv === 'tax') updateTaxPreview();
+  else if (lv === 'bounty') updateBountyHint();
+  else if (lv === 'cash') updateCashSum();
+  else if (lv === 'tarif') updateTarifHint();
   else if (lv === 'pal-custom') customPalette(String(t.value), false);
   else if (lv === 'search') {
     var key = t.getAttribute('data-key');
@@ -2491,12 +2741,15 @@ document.addEventListener('change', function (e) {
   else if (lv === 'pal-custom') customPalette(String(t.value), true);
   else if (lv === 'rv-chk') updateReviewButtons();
   else if (lv === 'bk') updateBookSum();
+  else if (lv === 'bounty') updateBountyHint();
+  else if (lv === 'cash') updateCashSum();
+  else if (lv === 'tarif') updateTarifHint();
   else if (lv === 'filter') { var key = t.getAttribute('data-key'); L[key].f = String(t.value); loadMore(key, true); }
   else if (a === 'status') {
     changeStatus(t, 'apiUpdateStatus', function (row, next) { return [S.token, String(row.closest('table').getAttribute('data-key')), String(row.getAttribute('data-id')), String(row.getAttribute('data-tgl')), next]; });
   } else if (a === 'bk-status') {
     changeStatus(t, 'apiUpdateBooking', function (row, next) { return [S.token, String(row.getAttribute('data-id')), String(row.getAttribute('data-tgl')), next]; }, function (sel, next) {
-      if (role() === 'Expert') sel.parentNode.innerHTML = bookingSelect(next);
+      if (role() === 'Expert') { sel.parentNode.innerHTML = bookingSelect(next); renderCreditWidget(true); }
     });
   }
 });
@@ -2511,7 +2764,7 @@ document.addEventListener('keydown', function (e) {
 });
 
 /* ============ Admin: Impor data dari app lama (spreadsheet lama hanya dibaca) ============ */
-var IMPORT_SHEETS = [['users', 'Users'], ['credits', 'Credits'], ['photos', 'Photos'], ['screenings', 'Screenings'], ['contracts', 'Contracts'], ['copyrights', 'Copyrights'], ['taxes', 'Taxes'], ['posts', 'Posts'], ['questions', 'Questions'], ['answers', 'Answers'], ['bookings', 'Bookings'], ['reviews', 'Reviews']];
+var IMPORT_SHEETS = [['users', 'Users'], ['credits', 'Credits'], ['photos', 'Photos'], ['screenings', 'Screenings'], ['contracts', 'Contracts'], ['copyrights', 'Copyrights'], ['taxes', 'Taxes'], ['posts', 'Posts'], ['questions', 'Questions'], ['answers', 'Answers'], ['bookings', 'Bookings'], ['reviews', 'Reviews'], ['ledger', 'Ledger'], ['cashouts', 'Cashouts']];
 VIEWS['import'] = function () {
   var h = head(tr('Migrasi', 'Migration'), tr('Impor data dari app lama', 'Import data from the old app'), tr('Data lama hanya DIBACA. Aman diulang: baris yang sudah ada tidak akan dobel.', 'The old data is only READ. Safe to repeat: existing rows are never duplicated.'));
   h += '<div class="card"><div class="fld"><label for="im-src">' + tr('URL atau ID spreadsheet app lama', 'Old app spreadsheet URL or ID') + '</label>';
@@ -2573,10 +2826,10 @@ function renderImport(res) {
 /* ============ Landing page (halaman depan publik, sebelum login) ============ */
 var LP = { data: null, idx: 0, timer: null, io: null, bound: false };
 var LP_SLIDES = [
-  { k: ['PLATFORM HUKUM UNTUK KREATOR', 'LEGAL PLATFORM FOR CREATORS'], t: ['Berkarya tenang, urusan hukum ada yang jaga', 'Create with confidence. We handle the legal side.'], s: ['Tanya pakar hukum terverifikasi, susun kontrak, dan lindungi karya Anda dari satu aplikasi.', 'Ask verified legal experts, draft contracts and protect your work, all from one app.'], v: 'laptop' },
-  { k: ['KONTRAK ENDORSEMENT', 'ENDORSEMENT CONTRACTS'], t: ['Kontrak endorse aman sebelum tanda tangan', 'Get your endorsement deal right before you sign'], s: ['Isi formulir singkat, dapatkan draf kontrak, lalu tim legal memeriksanya untuk Anda.', 'Fill in a short form, get a draft contract, and our legal team checks it for you.'], v: 'doc' },
+  { k: ['UNTUK UMKM & PROFESIONAL', 'FOR BUSINESSES & PROFESSIONALS'], t: ['Berusaha dengan tenang. Sisanya kami yang jaga.', 'Build freely. We’ll protect the rest.'], s: ['Untuk pelaku UMKM, wirausaha, profesional, dan kreator. Ikuti pakar terverifikasi, tanya lewat bounty, lalu booking konsultasi.', 'For small businesses, entrepreneurs, professionals and creators. Follow verified experts, ask through a bounty, then book a consultation.'], v: 'laptop' },
+  { k: ['BOUNTY PERTANYAAN', 'QUESTION BOUNTY'], t: ['Pasang poin, pakar berlomba menjawab', 'Put points on it. Experts compete to answer.'], s: ['Anda pilih jawaban terbaik. Tidak ada jawaban dalam 7 hari? Poin kembali utuh.', 'You pick the best answer. No answer in 7 days? You get every point back.'], v: 'bounty' },
   { k: ['PAKAR TERVERIFIKASI', 'VERIFIED EXPERTS'], t: ['Pakar yang lolos screening, rating yang jujur', 'Screened experts. Honest ratings.'], s: ['Izin praktik dan latar belakang setiap pakar diperiksa admin. Ulasan datang dari client sungguhan.', 'Every expert has their licence and background checked. Reviews come from real clients.'], v: 'phone' },
-  { k: ['PAJAK & HAK CIPTA', 'TAX & COPYRIGHT'], t: ['Pajak dan hak cipta beres di satu tempat', 'Tax records and copyright, sorted in one place'], s: ['Catat penghasilan dari semua platform, laporkan konten yang dibajak, lalu pantau statusnya.', 'Log income from every platform, report stolen content and follow the case.'], v: 'illus' }
+  { k: ['BOOKING KONSULTASI', 'BOOK A CONSULTATION'], t: ['Kasus pribadi? Bicara langsung dengan pakarnya', 'A personal case? Talk to the expert directly.'], s: ['Tarif dalam poin ditentukan pakar. Poin ditahan sampai sesi selesai, dan kembali bila pakar menolak.', 'Experts set their own rate in points. Points are held until the session ends and come back if they decline.'], v: 'book' }
 ];
 function lpReduced() { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
 
@@ -2592,12 +2845,17 @@ function mkLaptop() {
   h += mkFloat('f2', '&#10003;', tr('Pakar terverifikasi', 'Verified experts'), '');
   return h + '</div>';
 }
-function mkDoc() {
-  var h = '<div class="mk-docwrap"><div class="mk-doc2"></div><div class="mk-doc"><b class="mk-doc-t">' + tr('PERJANJIAN KERJA SAMA ENDORSEMENT', 'ENDORSEMENT AGREEMENT') + '</b><i class="ln w90"></i><i class="ln w70"></i>';
-  h += '<div class="mk-field"><span>Brand</span><b>' + tr('Brand Anda', 'Your brand') + '</b></div><div class="mk-field"><span>' + tr('Nilai kontrak', 'Contract value') + '</span><b>Rp5.000.000</b></div><div class="mk-field"><span>' + tr('Pembayaran', 'Payment') + '</span><b>50% / 50%</b></div>';
-  h += '<i class="ln w80"></i><i class="ln w60"></i><div class="mk-sign"><i></i><i></i></div><span class="mk-stamp">&#10003; ' + tr('TERVERIFIKASI', 'VERIFIED') + '</span></div>';
-  h += mkFloat('f3', '&#9998;', tr('Draf siap dalam hitungan menit', 'Draft ready in minutes'), '');
-  return h + '</div>';
+function mkTicket(title, rows, stamp, flt) {
+  var h = '<div class="mk-docwrap"><div class="mk-doc2"></div><div class="mk-doc"><b class="mk-doc-t">' + esc(title) + '</b><i class="ln w90"></i><i class="ln w70"></i>';
+  for (var i = 0; i < rows.length; i++) h += '<div class="mk-field"><span>' + esc(rows[i][0]) + '</span><b>' + esc(rows[i][1]) + '</b></div>';
+  h += '<i class="ln w80"></i><i class="ln w60"></i><span class="mk-stamp">&#10003; ' + esc(stamp) + '</span></div>';
+  return h + flt + '</div>';
+}
+function mkBounty() {
+  return mkTicket(tr('BOUNTY PERTANYAAN', 'QUESTION BOUNTY'), [['Bounty', '300 ' + tr('poin', 'points')], [tr('Jawaban', 'Answers'), '3 ' + tr('pakar', 'experts')], [tr('Batas', 'Deadline'), '7 ' + tr('hari', 'days')]], tr('JAWABAN TERPILIH', 'BEST ANSWER'), mkFloat('f3', '+', tr('+300 poin ke pakar', '+300 points to the expert'), ''));
+}
+function mkBookVis() {
+  return mkTicket(tr('BOOKING KONSULTASI', 'CONSULTATION BOOKING'), [[tr('Layanan', 'Service'), tr('Konsultasi 30 menit', '30-minute session')], [tr('Tarif', 'Rate'), '2.500 ' + tr('poin', 'points')], ['Status', tr('Diterima pakar', 'Accepted')]], tr('DIKONFIRMASI', 'CONFIRMED'), mkFloat('f3', '&#9719;', tr('Poin aman sampai sesi selesai', 'Points held until the session ends'), ''));
 }
 function mkPhone() {
   var bars = [92, 6, 2, 0, 0], b = '';
@@ -2623,16 +2881,14 @@ function lpVisual(i) {
   var img = LP.data && LP.data.images ? LP.data.images[i] : '';
   if (img) return '<img class="lp-photo" src="' + esc(img) + '" alt="">';
   var v = LP_SLIDES[i].v;
-  return v === 'laptop' ? mkLaptop() : (v === 'doc' ? mkDoc() : (v === 'phone' ? mkPhone() : mkIllus()));
+  return v === 'laptop' ? mkLaptop() : (v === 'bounty' ? mkBounty() : (v === 'phone' ? mkPhone() : mkBookVis()));
 }
 
 /* ----- Render seluruh halaman depan ----- */
 function lpPrice() {
   var p = LP.data && LP.data.price;
   if (p) return p;
-  var sv = S.cfg.services, m = 0;
-  for (var k in sv) if (!m || sv[k].price < m) m = sv[k].price;
-  return { start: { poin: 1000, quota: 5 }, topup: S.cfg.topup, svcMin: m, cost: S.cfg.cost };
+  return { start: { poin: 100, quota: 0 }, topup: S.cfg.topup, svcMin: (S.cfg.poin || {}).rateDefault || 2500, cost: S.cfg.cost, poin: S.cfg.poin, pro: S.cfg.pro };
 }
 function lpSection(id, cls, eyebrow, title, sub, body) {
   return '<section class="lp-sec' + (cls ? ' ' + cls : '') + '" id="' + id + '"><div class="lp-wrap"><div class="lp-h lp-rv"><p class="eyebrow">' + esc(eyebrow) + '</p><h2>' + esc(title) + '</h2>' + (sub ? '<p>' + esc(sub) + '</p>' : '') + '</div>' + body + '</div></section>';
@@ -2666,7 +2922,7 @@ function renderLanding() {
   h += '</div></section>';
 
   // Angka nyata dari database
-  var stats = [['experts', tr('Pakar terverifikasi', 'Verified experts'), 0], ['creators', tr('Kreator bergabung', 'Creators joined'), 0], ['done', tr('Konsultasi selesai', 'Sessions completed'), 0], ['avg', tr('Rating rata-rata', 'Average rating'), 1]];
+  var stats = [['experts', tr('Pakar terverifikasi', 'Verified experts'), 0], ['creators', tr('Client bergabung', 'Clients joined'), 0], ['done', tr('Konsultasi selesai', 'Sessions completed'), 0], ['avg', tr('Rating rata-rata', 'Average rating'), 1]];
   h += '<div class="lp-statwrap"><div class="lp-stats lp-rv">';
   for (var k = 0; k < stats.length; k++) {
     var v = st ? Number(st[stats[k][0]]) || 0 : null;
@@ -2675,17 +2931,17 @@ function renderLanding() {
   h += '</div></div>';
 
   // Fitur
-  var feats = [['doc', tr('Kontrak endorsement', 'Endorsement contracts'), tr('Susun draf kontrak yang jelas, lalu minta tim legal memeriksanya.', 'Draft a clear contract, then have our legal team check it.')],
-    ['copyright', tr('Pelacak hak cipta', 'Copyright tracker'), tr('Laporkan konten yang dibajak dan pantau penanganannya.', 'Report stolen content and follow how it is handled.')],
-    ['coin', tr('Catatan pajak', 'Tax logger'), tr('Catat penghasilan dari semua platform dan mata uang.', 'Log income from every platform and currency.')],
+  var feats = [['feed', tr('Feed sosial hukum', 'A legal social feed'), tr('Ikuti pakar, baca tips singkat, dan ikut berdiskusi. Gratis.', 'Follow experts, read short tips and join the conversation. Free.')],
+    ['trophy', tr('Bounty pertanyaan', 'Question bounty'), tr('Pasang poin di pertanyaan Anda, pilih jawaban terbaik dari beberapa pakar.', 'Put points on your question and pick the best of several expert answers.')],
+    ['calendar', tr('Booking konsultasi', 'Consultation booking'), tr('Sesi pribadi 1-on-1 dengan pakar pilihan. Tarif dalam poin.', 'A private one-to-one session with the expert you choose, priced in points.')],
     ['shield', tr('Pakar terverifikasi', 'Verified experts'), tr('Setiap pakar lolos screening izin praktik dan latar belakang.', 'Every expert passes a licence and background check.')],
     ['star', tr('Rating & ulasan', 'Ratings & reviews'), tr('Pilih pakar berdasarkan ulasan dari client sungguhan.', 'Choose experts based on reviews from real clients.')]];
   var fh = '<div class="lp-feat">';
   for (var f = 0; f < feats.length; f++) fh += '<div class="lp-fc lp-rv" style="--d:' + (f * 70) + 'ms"><span class="lp-fi">' + ic(feats[f][0]) + '</span><h3>' + esc(feats[f][1]) + '</h3><p>' + esc(feats[f][2]) + '</p></div>';
-  h += lpSection('lp-fitur', '', tr('FITUR', 'FEATURES'), tr('Semua kebutuhan hukum kreator dalam satu aplikasi', 'Everything a creator needs, legally speaking'), tr('Dari kontrak pertama sampai laporan pajak tahunan.', 'From your first contract to your yearly tax report.'), fh + '</div>');
+  h += lpSection('lp-fitur', '', tr('FITUR', 'FEATURES'), tr('Dari ngobrol santai sampai konsultasi pribadi', 'From a casual chat to a private consultation'), tr('Tiga tingkat bantuan hukum: feed gratis, bounty, dan booking.', 'Three levels of legal help: a free feed, bounties and bookings.'), fh + '</div>');
 
   // Cara kerja
-  var steps = [[tr('Daftar gratis', 'Sign up free'), tr('Buat akun sebagai kreator dalam satu menit.', 'Create a creator account in a minute.')], [tr('Tanya atau booking pakar', 'Ask or book an expert'), tr('Ajukan pertanyaan atau pilih pakar dan jadwalkan konsultasi.', 'Post a question, or pick an expert and book a session.')], [tr('Selesai, lalu beri ulasan', 'Done. Leave a review.'), tr('Ulasan Anda membantu kreator lain memilih pakar yang tepat.', 'Your review helps other creators choose the right expert.')]];
+  var steps = [[tr('Daftar gratis', 'Sign up free'), tr('Buat akun client dalam satu menit.', 'Create a client account in a minute.')], [tr('Pasang bounty atau booking', 'Post a bounty or book'), tr('Tanya dengan hadiah poin, atau pilih pakar dan jadwalkan konsultasi.', 'Ask with a points reward, or pick an expert and book a session.')], [tr('Selesai, lalu beri ulasan', 'Done. Leave a review.'), tr('Ulasan Anda membantu client lain memilih pakar yang tepat.', 'Your review helps other clients choose the right expert.')]];
   var sh = '<div class="lp-steps">';
   for (var p = 0; p < steps.length; p++) sh += '<div class="lp-step lp-rv" style="--d:' + (p * 90) + 'ms"><span class="lp-num">' + (p + 1) + '</span><h3>' + esc(steps[p][0]) + '</h3><p>' + esc(steps[p][1]) + '</p></div>';
   h += lpSection('lp-cara', 'alt', tr('CARA KERJA', 'HOW IT WORKS'), tr('Tiga langkah, tanpa ribet', 'Three simple steps'), '', sh + '</div>');
@@ -2710,7 +2966,7 @@ function renderLanding() {
       var q = ts[t];
       th += '<figure class="lp-tc lp-rv" style="--d:' + (t * 80) + 'ms">' + stars(q[1]) + '<blockquote class="lp-q">' + esc(q[2]) + '</blockquote><figcaption class="lp-who"><span class="avatar">' + esc(initials(q[0].replace(/\*/g, ''))) + '</span><span><b>' + esc(q[0]) + '</b><small>' + tr('untuk ', 'for ') + esc(q[3]) + ' &middot; ' + (q[4] === 'Konsultasi' ? tr('Konsultasi', 'Consultation') : tr('Tanya Pakar', 'Q&A')) + '</small></span></figcaption></figure>';
     }
-    h += lpSection('lp-testi', 'alt', tr('KATA MEREKA', 'TESTIMONIALS'), tr('Dipercaya kreator yang sudah mencoba', 'Trusted by creators who tried it'), '', th + '</div>');
+    h += lpSection('lp-testi', 'alt', tr('KATA MEREKA', 'TESTIMONIALS'), tr('Dipercaya client yang sudah mencoba', 'Trusted by clients who tried it'), '', th + '</div>');
   }
 
   // Harga (dari konfigurasi server)
@@ -2718,20 +2974,21 @@ function renderLanding() {
   var plan = function (hi, name, price, per, items, cta) {
     var li = '';
     for (var a = 0; a < items.length; a++) li += '<li>' + esc(items[a]) + '</li>';
-    return '<div class="lp-pc lp-rv' + (hi ? ' hi' : '') + '">' + (hi ? '<span class="lp-badge">' + tr('Untuk kreator aktif', 'For active creators') + '</span>' : '') + '<h3>' + esc(name) + '</h3><div class="lp-price">' + price + (per ? '<small>' + esc(per) + '</small>' : '') + '</div><ul>' + li + '</ul><button class="btn ' + (hi ? '' : 'ghost') + '" data-action="to-reg">' + esc(cta) + '</button></div>';
+    return '<div class="lp-pc lp-rv' + (hi ? ' hi' : '') + '">' + (hi ? '<span class="lp-badge">' + tr('Untuk client aktif', 'For active clients') + '</span>' : '') + '<h3>' + esc(name) + '</h3><div class="lp-price">' + price + (per ? '<small>' + esc(per) + '</small>' : '') + '</div><ul>' + li + '</ul><button class="btn ' + (hi ? '' : 'ghost') + '" data-action="to-reg">' + esc(cta) + '</button></div>';
   };
-  var ph = '<div class="lp-pr">';
-  ph += plan(false, tr('Gratis', 'Free'), 'Rp0', '', [nf(pr.start.poin) + ' ' + tr('poin awal', 'starter points'), nf(pr.start.quota) + tr(' aksi gratis per bulan', ' free actions a month'), tr('Feed wawasan hukum', 'Legal insight feed'), tr('Direktori pakar & rating', 'Expert directory & ratings')], tr('Mulai gratis', 'Start free'));
-  if (tp.subs) ph += plan(true, tp.subs.label, rp(tp.subs.price), tr('/bulan', '/month'), [nf(tp.subs.quota) + tr(' aksi per bulan', ' actions a month'), tr('Tanya pakar & buat kontrak', 'Ask experts & draft contracts'), tr('Catatan pajak tanpa batas', 'Unlimited tax records'), tr('Pelacakan kasus hak cipta', 'Copyright case tracking')], tr('Pilih Pro', 'Choose Pro'));
-  if (tp.poin) ph += plan(false, tr('Isi ulang poin', 'Point top-up'), rp(tp.poin.price), '', [nf(tp.poin.poin) + ' ' + tr('poin', 'points'), tr('Tanya pakar: ', 'Ask an expert: ') + nf(pr.cost.question) + ' ' + tr('poin', 'points'), tr('Buat kontrak: ', 'Draft a contract: ') + nf(pr.cost.contract) + ' ' + tr('poin', 'points'), tr('Tanpa masa berlaku bulanan', 'No monthly expiry')], tr('Daftar & isi ulang', 'Sign up & top up'));
-  ph += '</div><p class="lp-note">' + tr('Konsultasi dengan pakar mulai ', 'Expert consultations start at ') + rp(pr.svcMin) + tr(' per sesi. Pembayaran di versi prototipe ini masih disimulasikan.', ' per session. Payments are simulated in this prototype.') + '</p>';
+  var ph = '<div class="lp-pr">', pp = pr.pro || { price: 100000, bonus: 1200, sorot: 3 }, po = pr.poin || { rp: 100, fee: 0.3, feePro: 0.2, cashMin: 1000 };
+  ph += plan(false, tr('Gratis', 'Free'), 'Rp0', '', [nf(pr.start.poin) + ' ' + tr('poin sambutan', 'welcome points'), tr('Feed wawasan hukum', 'Legal insight feed'), tr('Bertanya tanpa bounty', 'Ask without a bounty'), tr('Direktori pakar & rating', 'Expert directory & ratings')], tr('Mulai gratis', 'Start free'));
+  ph += plan(true, 'Pro', rp(pp.price), tr('/bulan', '/month'), [nf(pp.bonus) + ' ' + tr('poin setiap bulan', 'points every month'), tr('Sorot bounty ', 'Boost a bounty ') + nf(pp.sorot) + tr('x sebulan', 'x a month'), tr('Lencana Pro', 'Pro badge'), tr('Pakar Pro: biaya layanan ', 'Pro experts: service fee ') + Math.round(po.feePro * 100) + '%'], tr('Pilih Pro', 'Choose Pro'));
+  ph += plan(false, tr('Isi ulang poin', 'Point top-up'), rp(5000), tr(' - Rp100.000', ' - Rp100,000'), [tr('50 sampai 1.000 poin', '50 to 1,000 points'), '1 ' + tr('poin', 'point') + ' = ' + rp(po.rp), tr('Untuk bounty & booking', 'For bounties & bookings'), tr('Bayar lewat QRIS / virtual account', 'Pay with QRIS / virtual account')], tr('Daftar & isi ulang', 'Sign up & top up'));
+  ph += '</div><p class="lp-note">' + tr('Konsultasi dengan pakar mulai ', 'Expert consultations start at ') + nf(pr.svcMin) + ' ' + tr('poin', 'points') + ' (' + rp(pr.svcMin * po.rp) + ')' + tr(' per sesi. Pembayaran di versi prototipe ini masih disimulasikan.', ' per session. Payments are simulated in this prototype.') + '</p>';
   h += lpSection('lp-harga', '', tr('HARGA', 'PRICING'), tr('Mulai gratis, bayar sesuai kebutuhan', 'Start free, pay as you grow'), '', ph);
 
   // FAQ
-  var faq = [[tr('Apakah pakar di Legal Hub benar-benar advokat?', 'Are the experts on Legal Hub real lawyers?'), tr('Setiap pakar mendaftar dengan nomor izin praktik atau KTA, ijazah, dan dokumen pendukung. Admin memeriksa lima poin screening sebelum akun pakar aktif.', 'Every expert signs up with a practice licence or membership number, a degree and supporting documents. An admin checks five screening points before the account goes live.')],
-    [tr('Berapa biaya untuk bertanya ke pakar?', 'How much does it cost to ask a question?'), tr('Satu pertanyaan memakai 1 kuota bulanan, atau ', 'Each question uses 1 monthly action, or ') + nf(pr.cost.question) + tr(' poin bila kuota habis.', ' points once your quota runs out.')],
+  var faq = [[tr('Legal Hub untuk siapa?', 'Who is Legal Hub for?'), tr('Untuk siapa pun yang membangun sesuatu sendiri: pemilik UMKM, wirausaha, profesional mandiri seperti dokter dan arsitek, juga kreator. Cukup daftar sebagai client.', 'Anyone who built something on their own: small business owners, entrepreneurs, independent professionals such as doctors and architects, and creators. Just sign up as a client.')],
+    [tr('Apakah pakar di Legal Hub benar-benar advokat?', 'Are the experts on Legal Hub real lawyers?'), tr('Setiap pakar mendaftar dengan nomor izin praktik atau KTA, ijazah, dan dokumen pendukung. Admin memeriksa lima poin screening sebelum akun pakar aktif.', 'Every expert signs up with a practice licence or membership number, a degree and supporting documents. An admin checks five screening points before the account goes live.')],
+    [tr('Berapa biaya untuk bertanya ke pakar?', 'How much does it cost to ask a question?'), tr('Bertanya itu gratis. Kalau ingin cepat dijawab, pasang bounty poin sesuai keinginan (1 poin = Rp100). Bila tidak ada jawaban dalam 7 hari, poin kembali utuh.', 'Asking is free. If you want a fast answer, add as many bounty points as you like (1 point = Rp100). If nobody answers within 7 days, you get every point back.')],
     [tr('Apakah data dan kasus saya aman?', 'Is my data safe?'), tr('Kasus pribadi dibahas lewat booking konsultasi, bukan di feed publik. Ulasan bisa dibuat anonim, dan admin menyembunyikan ulasan yang memuat data pribadi.', 'Personal cases are discussed in booked consultations, not on the public feed. Reviews can be anonymous, and admins hide any review that contains personal data.')],
-    [tr('Apakah draf kontrak bisa langsung dipakai?', 'Can I use the contract draft right away?'), tr('Draf adalah template umum, bukan nasihat hukum. Ajukan ke tim legal untuk diperiksa sebelum ditandatangani.', 'The draft is a general template, not legal advice. Send it to the legal team for review before you sign.')],
+    [tr('Bagaimana pakar dibayar?', 'How do experts get paid?'), tr('Pakar menerima poin dari bounty dan booking, lalu mencairkannya mulai 1.000 poin (Rp100.000). Platform memotong biaya layanan 30%, atau 20% untuk pakar Pro.', 'Experts earn points from bounties and bookings, then cash out from 1,000 points (Rp100,000). The platform keeps a 30% service fee, or 20% for Pro experts.')],
     [tr('Bagaimana cara membayar?', 'How do I pay?'), tr('Anda bisa mengisi ulang poin atau berlangganan paket Pro. Pada versi prototipe ini pembayaran masih disimulasikan.', 'You can top up points or subscribe to Pro. In this prototype, payments are simulated.')],
     [tr('Saya pakar hukum. Bagaimana cara bergabung?', 'I am a legal expert. How do I join?'), tr('Daftar sebagai pakar, lengkapi data latar belakang, lalu tunggu screening admin. Akun aktif setelah disetujui.', 'Sign up as an expert, complete your background details and wait for the admin screening. Your account goes live once approved.')]];
   var qh = '<div class="lp-faq">';
@@ -2739,11 +2996,11 @@ function renderLanding() {
   h += lpSection('lp-faq', 'alt', 'FAQ', tr('Pertanyaan yang sering diajukan', 'Frequently asked questions'), '', qh + '</div>');
 
   // Ajakan akhir + footer
-  h += '<section class="lp-sec lp-endsec"><div class="lp-band lp-rv"><h2>' + tr('Siap berkarya tanpa khawatir?', 'Ready to create without worrying?') + '</h2><p>' + tr('Gabung gratis dan temukan pakar hukum yang tepat untuk Anda.', 'Join free and find the right legal expert for you.') + '</p><div class="lp-cta c"><button class="btn lg lp-w" data-action="to-reg">' + tr('Daftar gratis', 'Sign up free') + '</button><button class="btn lg lp-o" data-action="to-login">' + tr('Saya sudah punya akun', 'I already have an account') + '</button></div></div></section>';
-  h += '<footer class="lp-foot"><div class="lp-wrap lp-fgrid"><div><div class="lp-brand static"><svg class="logo" aria-hidden="true"><use href="#logo"/></svg><span>Legal Hub</span></div><p>' + tr('Jejaring profesional yang mempertemukan kreator dengan pakar hukum terverifikasi.', 'The professional network that connects creators with verified legal experts.') + '</p></div>';
+  h += '<section class="lp-sec lp-endsec"><div class="lp-band lp-rv"><h2>' + tr('Siap berusaha tanpa khawatir?', 'Ready to build without worrying?') + '</h2><p>' + tr('Gabung gratis dan temukan pakar hukum yang tepat untuk Anda.', 'Join free and find the right legal expert for you.') + '</p><div class="lp-cta c"><button class="btn lg lp-w" data-action="to-reg">' + tr('Daftar gratis', 'Sign up free') + '</button><button class="btn lg lp-o" data-action="to-login">' + tr('Saya sudah punya akun', 'I already have an account') + '</button></div></div></section>';
+  h += '<footer class="lp-foot"><div class="lp-wrap lp-fgrid"><div><div class="lp-brand static"><svg class="logo" aria-hidden="true"><use href="#logo"/></svg><span>Legal Hub</span></div><p>' + tr('Jejaring profesional yang mempertemukan UMKM, wirausaha, profesional, dan kreator dengan pakar hukum terverifikasi.', 'The professional network that connects small businesses, entrepreneurs, professionals and creators with verified legal experts.') + '</p></div>';
   h += '<div><b>' + tr('Produk', 'Product') + '</b>';
   for (var y = 0; y < nav.length; y++) h += '<button data-action="lp-scroll" data-to="' + nav[y][0] + '">' + esc(nav[y][1]) + '</button>';
-  h += '</div><div><b>' + tr('Akun', 'Account') + '</b><button data-action="to-login">' + tr('Masuk', 'Sign in') + '</button><button data-action="to-reg">' + tr('Daftar sebagai kreator', 'Join as a creator') + '</button><button data-action="to-reg" data-role="Expert">' + tr('Daftar sebagai pakar', 'Join as an expert') + '</button></div></div>';
+  h += '</div><div><b>' + tr('Akun', 'Account') + '</b><button data-action="to-login">' + tr('Masuk', 'Sign in') + '</button><button data-action="to-reg">' + tr('Daftar sebagai client', 'Join as a client') + '</button><button data-action="to-reg" data-role="Expert">' + tr('Daftar sebagai pakar', 'Join as an expert') + '</button></div></div>';
   h += '<div class="lp-wrap lp-fbot"><span>&copy; ' + new Date().getFullYear() + ' Legal Hub</span><span>' + tr('Informasi di platform ini bukan pengganti nasihat hukum resmi.', 'Information on this platform is not a substitute for formal legal advice.') + '</span></div></footer>';
 
   box.innerHTML = h;
